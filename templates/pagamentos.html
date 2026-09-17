@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Pagamentos - Queridin DI MINAS</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .topo {
+            background: #8B4A00;
+            color: white;
+            padding: 30px;
+        }
+
+        .topo h2 {
+            margin: 0;
+        }
+
+        .conteudo {
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 1200px;
+            margin: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #8B4A00;
+        }
+
+        .botao {
+            display: inline-block;
+            background: #8B4A00;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-bottom: 25px;
+        }
+
+        .tabela-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #8B4A00;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="topo">
+        <h2>Queridin DI MINAS</h2>
+    </div>
+
+    <div class="conteudo">
+
+        <div class="card">
+
+            <h1>Pagamentos</h1>
+
+            <p>
+                Gerenciamento dos pagamentos realizados
+                aos colaboradores participantes do programa.
+            </p>
+
+            <a href="/novo_pagamento" class="botao">
+                + Novo Pagamento
+            </a>
+
+            <div class="tabela-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Valor</th>
+                            <th>Data</th>
+                            <th>Forma de pagamento</th>
+                            <th>Observação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="lista-pagamentos">
+
+                        <tr>
+                            <td colspan="5">
+                                Nenhum pagamento cadastrado.
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+    <script>
+        async function carregarPagamentos() {
+            const resposta = await fetch("/api/pagamentos");
+            const pagamentos = await resposta.json();
+
+            const tabela = document.getElementById("lista-pagamentos");
+
+            if (pagamentos.length === 0) {
+                tabela.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        Nenhum pagamento cadastrado.
+                    </td>
+                </tr>
+            `;
+                return;
+            }
+
+            tabela.innerHTML = "";
+
+            pagamentos.forEach(pagamento => {
+                const linha = document.createElement("tr");
+
+                linha.innerHTML = `
+                <td>${pagamento.colaborador || ""}</td>
+                <td>R$ ${Number(pagamento.valor).toFixed(2).replace(".", ",")}</td>
+                <td>${pagamento.data_pagamento || ""}</td>
+                <td>${pagamento.forma_pagamento || ""}</td>
+                <td>${pagamento.observacao || ""}</td>
+                <td>
+    <button onclick="window.location.href='/editar_pagamento/${pagamento.id}'">
+        ✏️ Editar
+    </button>
+
+    <button onclick="excluirPagamento(${pagamento.id})">
+        🗑️ Excluir
+    </button>
+</td>
+            `;
+
+                tabela.appendChild(linha);
+            });
+        }
+
+        async function excluirPagamento(id) {
+            if (!confirm("Deseja realmente excluir este pagamento?")) {
+                return;
+            }
+
+            const resposta = await fetch(`/pagamentos/excluir/${id}`, {
+                method: "POST"
+            });
+
+            if (resposta.ok) {
+                carregarPagamentos();
+            } else {
+                alert("Não foi possível excluir o pagamento.");
+            }
+        }
+
+        carregarPagamentos();
+    </script>
+</body>
+
+</html>

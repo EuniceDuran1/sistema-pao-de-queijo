@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Relatórios - Sistema Pão de Queijo</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f8f1e7;
+            color: #5b2c06;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: #8b4a00;
+            color: white;
+            padding: 30px 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+
+        .logo img {
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+        }
+
+        .menu a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 15px 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+        }
+
+        .menu a:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .conteudo {
+            flex: 1;
+            padding: 40px;
+        }
+
+        .cabecalho {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #8b4a00;
+        }
+
+        .usuario {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            color: #8b4a00;
+            margin-bottom: 10px;
+        }
+
+        .descricao {
+            color: #6b5848;
+            font-size: 16px;
+        }
+
+        .rodape {
+            margin-top: 30px;
+            text-align: center;
+            color: #8b6b4a;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="layout">
+
+        <aside class="sidebar">
+
+            <div class="logo">
+                <img src="/static/img/logo.png" alt="Queridin DI MINAS">
+            </div>
+
+            <nav class="menu">
+
+                <a href="/">🏠 Dashboard</a>
+
+                <a href="/produtos">📦 Produtos</a>
+
+                <a href="/pedidos">🛒 Pedidos</a>
+
+                <a href="/clientes">👥 Clientes</a>
+
+                <a href="/estoque">📊 Estoque</a>
+
+                <a href="/financeiro">💰 Financeiro</a>
+
+                <a href="/relatorios">📈 Relatórios</a>
+
+            </nav>
+
+        </aside>
+
+        <main class="conteudo">
+
+            <div class="cabecalho">
+
+                <div>
+
+                    <h1>📈 Relatórios</h1>
+
+                    <p>Relatórios e indicadores do sistema</p>
+
+                </div>
+
+                <div class="usuario">
+                    👤 Administrador
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <h2>💰 Relatório de Vendas</h2>
+                <div style="margin-top: 20px;">
+
+                    <label for="filtro-periodo">
+                        <strong>Período:</strong>
+                    </label>
+
+                    <select id="filtro-periodo" style="
+        margin-left: 10px;
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    ">
+                        <option value="todos">Todo o período</option>
+                        <option value="hoje">Hoje</option>
+                        <option value="7dias">Últimos 7 dias</option>
+                        <option value="mes">Este mês</option>
+                    </select>
+
+                </div>
+
+                <div style="
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+    ">
+
+                    <div>
+                        <p class="descricao">Total vendido</p>
+                        <h3 id="relatorio-vendas">R$ 0,00</h3>
+                    </div>
+
+                    <div>
+                        <p class="descricao">Número de pedidos</p>
+                        <h3 id="relatorio-pedidos">0</h3>
+                    </div>
+
+                    <div>
+                        <p class="descricao">Ticket médio</p>
+                        <h3 id="relatorio-ticket">R$ 0,00</h3>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <h2>📦 Produtos Mais Vendidos</h2>
+
+                <p class="descricao">
+                    Produtos com maior quantidade de vendas.
+                </p>
+
+                <div style="margin-top: 30px;">
+                    <canvas id="grafico-produtos" style="max-height: 300px;">
+                    </canvas>
+                </div>
+
+                <table style="
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+    ">
+
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 12px;">
+                                Produto
+                            </th>
+
+                            <th style="text-align: right; padding: 12px;">
+                                Quantidade vendida
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="tabela-produtos-mais-vendidos">
+
+                        <tr>
+                            <td colspan="2" style="padding: 12px;">
+                                Carregando...
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="card">
+                <h2>🛒 Relatório de Pedidos</h2>
+
+                <p class="descricao">
+                    Quantidade de pedidos por situação.
+                </p>
+                <div style="margin-top: 30px;">
+                    <canvas id="grafico-pedidos" style="max-height: 300px;"></canvas>
+                </div>
+                <div id="relatorio-pedidos-status" style="margin-top: 20px;">
+                </div>
+            </div>
+            <div class="card">
+                <h2>💵 Relatório Financeiro</h2>
+
+                <p class="descricao">
+                    Entradas, saídas e saldo financeiro.
+                </p>
+
+                <div style="
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+    ">
+                    <div>
+                        <p class="descricao">Entradas</p>
+                        <h3 id="relatorio-entradas">R$ 0,00</h3>
+                    </div>
+
+                    <div>
+                        <p class="descricao">Saídas</p>
+                        <h3 id="relatorio-saidas">R$ 0,00</h3>
+                    </div>
+
+                    <div>
+                        <p class="descricao">Saldo</p>
+                        <h3 id="relatorio-saldo">R$ 0,00</h3>
+                    </div>
+                </div>
+
+
+                <div style="margin-top: 30px;">
+                    <canvas id="grafico-financeiro" style="max-height: 300px;">
+                    </canvas>
+                </div>
+
+            </div>
+
+            <div class="rodape">
+                Sistema Pão de Queijo • Gestão de vendas e estoque
+            </div>
+    </div>
+
+    </main>
+
+    </div>
+    <script>
+        async function carregarRelatorioVendas() {
+            try {
+                const periodo = document.getElementById("filtro-periodo").value;
+
+                const resposta = await fetch(
+                    "/api/dashboard?periodo=" + periodo
+                );
+
+                const dados = await resposta.json();
+
+                const totalVendas = Number(dados.total_vendas);
+                const totalPedidos = Number(dados.total_pedidos);
+
+                const ticketMedio =
+                    totalPedidos > 0
+                        ? totalVendas / totalPedidos
+                        : 0;
+
+                document.getElementById("relatorio-vendas").textContent =
+                    totalVendas.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+
+                document.getElementById("relatorio-pedidos").textContent =
+                    totalPedidos;
+
+                document.getElementById("relatorio-ticket").textContent =
+                    ticketMedio.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+
+            } catch (erro) {
+                console.error(
+                    "Erro ao carregar relatório de vendas:",
+                    erro
+                );
+            }
+        }
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarRelatorioVendas
+        );
+        document.getElementById("filtro-periodo").addEventListener(
+            "change",
+            function () {
+                carregarRelatorioVendas();
+                carregarProdutosMaisVendidos();
+                carregarRelatorioPedidos();
+                carregarRelatorioFinanceiro();
+            }
+        );
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        let graficoProdutos = null;
+        async function carregarProdutosMaisVendidos() {
+            try {
+                const periodo = document.getElementById("filtro-periodo").value;
+
+                const resposta = await fetch(
+                    "/api/relatorios/produtos-mais-vendidos?periodo=" + periodo
+                );
+
+                const produtos = await resposta.json();
+
+                const tabela = document.getElementById(
+                    "tabela-produtos-mais-vendidos"
+                );
+
+                tabela.innerHTML = "";
+
+                produtos.forEach(function (produto) {
+
+                    const linha = document.createElement("tr");
+
+                    linha.innerHTML = `
+    <td style="padding: 12px;">
+        ${produto.produto}
+    </td>
+
+    <td style="
+                        padding: 12px;
+                        text-align: right;
+                    ">
+        ${produto.quantidade_vendida}
+    </td>
+    `;
+
+                    tabela.appendChild(linha);
+                });
+
+                const grafico = document.getElementById(
+                    "grafico-produtos"
+                );
+                if (graficoProdutos) {
+                    graficoProdutos.destroy();
+                }
+                const nomes = produtos.map(
+                    produto => produto.produto
+                );
+
+                const quantidades = produtos.map(
+                    produto => produto.quantidade_vendida
+                );
+
+                graficoProdutos = new Chart(grafico, {
+                    type: "bar",
+
+                    data: {
+                        labels: nomes,
+
+                        datasets: [{
+                            label: "Quantidade vendida",
+                            data: quantidades
+                        }]
+                    },
+
+                    options: {
+                        responsive: true,
+
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (erro) {
+                console.error(
+                    "Erro ao carregar produtos mais vendidos:",
+                    erro
+                );
+            }
+        }
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarProdutosMaisVendidos
+        );
+        let graficoPedidos = null;
+        async function carregarRelatorioPedidos() {
+            try {
+
+                const periodo = document.getElementById("filtro-periodo").value;
+
+                const resposta = await fetch(
+                    "/api/relatorios/pedidos?periodo=" + periodo
+                );
+
+                const dados = await resposta.json();
+
+                const container = document.getElementById(
+                    "relatorio-pedidos-status"
+                );
+
+                container.innerHTML = "";
+
+                dados.forEach(function (item) {
+
+                    const linha = document.createElement("div");
+
+                    linha.style.display = "flex";
+                    linha.style.justifyContent = "space-between";
+                    linha.style.marginBottom = "12px";
+
+                    linha.innerHTML = `
+    <span>${item.status}</span>
+    <strong>${item.quantidade}</strong>
+    `;
+
+                    container.appendChild(linha);
+                });
+                const grafico = document.getElementById(
+                    "grafico-pedidos"
+                );
+                if (graficoPedidos) {
+                    graficoPedidos.destroy();
+                }
+
+                const status = dados.map(
+                    item => item.status
+                );
+
+                const quantidades = dados.map(
+                    item => item.quantidade
+                );
+                graficoPedidos = new Chart(grafico, {
+                    type: "bar",
+
+                    data: {
+                        labels: status,
+
+                        datasets: [{
+                            label: "Quantidade de pedidos",
+                            data: quantidades
+                        }]
+                    },
+
+                    options: {
+                        responsive: true,
+
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (erro) {
+
+                console.error(
+                    "Erro ao carregar relatório de pedidos:",
+                    erro
+                );
+            }
+        }
+
+        let graficoFinanceiro = null;
+        async function carregarRelatorioFinanceiro() {
+            try {
+                const periodo = document.getElementById("filtro-periodo").value;
+
+                const resposta = await fetch(
+                    "/api/financeiro?periodo=" + periodo
+                );
+
+
+                const dados = await resposta.json();
+
+                const entradas = Number(
+                    dados.total_entradas
+                );
+
+                const saidas = Number(
+                    dados.total_saidas
+                );
+
+                const saldo = Number(
+                    dados.saldo
+                );
+
+                document.getElementById(
+                    "relatorio-entradas"
+                ).textContent =
+                    entradas.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+
+                document.getElementById(
+                    "relatorio-saidas"
+                ).textContent =
+                    saidas.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+
+                document.getElementById(
+                    "relatorio-saldo"
+                ).textContent =
+                    saldo.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+                const grafico = document.getElementById(
+                    "grafico-financeiro"
+                );
+                if (graficoFinanceiro) {
+                    graficoFinanceiro.destroy();
+                }
+
+                graficoFinanceiro = new Chart(grafico, {
+                    type: "bar",
+
+                    data: {
+                        labels: ["Entradas", "Saídas"],
+
+                        datasets: [{
+                            label: "Valor (R$)",
+                            data: [entradas, saidas]
+                        }]
+                    },
+
+                    plugins: [{
+                        id: "mostrarValores",
+
+                        afterDatasetsDraw: function (chart) {
+
+                            const ctx = chart.ctx;
+
+                            chart.data.datasets.forEach(function (dataset, i) {
+
+                                const meta = chart.getDatasetMeta(i);
+
+                                meta.data.forEach(function (bar, index) {
+
+                                    const valor = dataset.data[index];
+
+                                    ctx.save();
+                                    ctx.font = "bold 12px Arial";
+                                    ctx.textAlign = "center";
+
+                                    ctx.fillText(
+                                        Number(valor).toLocaleString(
+                                            "pt-BR",
+                                            {
+                                                style: "currency",
+                                                currency: "BRL"
+                                            }
+                                        ),
+                                        bar.x,
+                                        bar.y - 8
+                                    );
+
+                                    ctx.restore();
+                                });
+                            });
+                        }
+                    }],
+
+                    options: {
+                        responsive: true,
+
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (erro) {
+                console.error(
+                    "Erro ao carregar relatório financeiro:",
+                    erro
+                );
+            }
+        }
+
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarRelatorioVendas
+        );
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarProdutosMaisVendidos
+        );
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarRelatorioPedidos
+        );
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            carregarRelatorioFinanceiro
+        );
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+
+</html>

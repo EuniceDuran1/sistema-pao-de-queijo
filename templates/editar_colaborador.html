@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Colaborador - Queridin DI MINAS</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .topo {
+            background: #8B4A00;
+            color: white;
+            padding: 30px;
+        }
+
+        .topo h2 {
+            margin: 0;
+        }
+
+        .conteudo {
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 900px;
+            margin: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #8B4A00;
+        }
+
+        .campo {
+            margin-bottom: 20px;
+        }
+
+        .campo label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .campo input,
+        .campo select {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+        }
+
+        .botoes {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .botao {
+            display: inline-block;
+            background: #8B4A00;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .voltar {
+            background: #777;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="topo">
+        <h2>Queridin DI MINAS</h2>
+    </div>
+
+    <div class="conteudo">
+
+        <div class="card">
+
+            <h1>Editar Colaborador</h1>
+
+            <form id="form-editar" method="post">
+                <div class="campo">
+                    <label for="nome">Nome</label>
+                    <input type="text" id="nome" name="nome">
+                </div>
+
+                <div class="campo">
+                    <label for="cpf">CPF</label>
+                    <input type="text" id="cpf" name="cpf">
+                </div>
+
+                <div class="campo">
+                    <label for="telefone">Telefone</label>
+                    <input type="text" id="telefone" name="telefone">
+                </div>
+
+                <div class="campo">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" name="email">
+                </div>
+
+                <div class="campo">
+                    <label for="chave_pix">Chave PIX</label>
+                    <input type="text" id="chave_pix" name="chave_pix">
+                </div>
+
+                <div class="campo">
+                    <label for="situacao">Situação</label>
+
+                    <select id="situacao" name="situacao">
+                        <option value="Ativo">Ativo</option>
+                        <option value="Inativo">Inativo</option>
+                    </select>
+                </div>
+
+                <div class="botoes">
+
+                    <button class="botao" type="submit">
+                        Salvar alterações
+                    </button>
+
+                    <a href="/colaboradores" class="botao voltar">
+                        Voltar
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+    <script>
+
+        const caminho = window.location.pathname;
+        const colaboradorId = caminho.split("/").pop();
+
+        async function carregarColaborador() {
+
+            const resposta = await fetch(`/api/colaboradores/${colaboradorId}`);
+            const colaborador = await resposta.json();
+
+            if (colaborador.erro) {
+                alert(colaborador.erro);
+                return;
+            }
+
+            document.getElementById("nome").value = colaborador.nome || "";
+            document.getElementById("cpf").value = colaborador.cpf || "";
+            document.getElementById("telefone").value = colaborador.telefone || "";
+            document.getElementById("email").value = colaborador.email || "";
+            document.getElementById("chave_pix").value = colaborador.chave_pix || "";
+            document.getElementById("situacao").value = colaborador.situacao || "Ativo";
+        }
+        document.getElementById("form-editar").action = `/editar_colaborador/${colaboradorId}`;
+        carregarColaborador();
+
+    </script>
+</body>
+
+</html>

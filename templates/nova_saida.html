@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Nova Saída - Sistema Pão de Queijo</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f7f0e6;
+            color: #5a2d00;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 50px auto;
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.10);
+        }
+
+        h1 {
+            color: #9b5200;
+            margin-bottom: 10px;
+        }
+
+        .subtitulo {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 7px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .salvar {
+            background: #9b5200;
+            color: white;
+        }
+
+        .cancelar {
+            background: #ddd;
+            color: #333;
+        }
+
+        #mensagem {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>💸 Nova Saída</h1>
+
+        <div class="subtitulo">
+            Registre uma despesa financeira da empresa.
+        </div>
+
+        <form id="form-saida">
+
+            <label for="descricao">
+                Descrição
+            </label>
+
+            <input type="text" id="descricao" placeholder="Ex.: Compra de farinha" required>
+
+            <label for="valor">
+                Valor
+            </label>
+
+            <input type="number" id="valor" step="0.01" min="0" placeholder="0,00" required>
+
+            <label for="observacao">
+                Observação
+            </label>
+
+            <textarea id="observacao" placeholder="Informações adicionais..."></textarea>
+
+            <div class="botoes">
+
+                <button type="submit" class="salvar">
+                    💾 Registrar Saída
+                </button>
+
+                <button type="button" class="cancelar" onclick="window.location.href='/financeiro'">
+                    ↩ Cancelar
+                </button>
+
+            </div>
+
+            <div id="mensagem"></div>
+
+        </form>
+
+    </div>
+
+    <script>
+
+        document.getElementById("form-saida").addEventListener("submit", async function (event) {
+
+            event.preventDefault();
+
+            const descricao = document.getElementById("descricao").value;
+            const valor = parseFloat(document.getElementById("valor").value);
+            const observacao = document.getElementById("observacao").value;
+
+            const mensagem = document.getElementById("mensagem");
+
+            try {
+
+                const resposta = await fetch("/api/financeiro/saida", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        descricao: descricao,
+                        valor: valor,
+                        observacao: observacao
+                    })
+                });
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok && !resultado.erro) {
+
+                    mensagem.style.color = "green";
+                    mensagem.textContent = "Saída registrada com sucesso!";
+
+                    setTimeout(function () {
+                        window.location.href = "/financeiro";
+                    }, 1000);
+
+                } else {
+
+                    mensagem.style.color = "red";
+                    mensagem.textContent =
+                        resultado.erro || "Erro ao registrar saída.";
+
+                }
+
+            } catch (erro) {
+
+                console.error(erro);
+
+                mensagem.style.color = "red";
+                mensagem.textContent =
+                    "Erro de comunicação com o servidor.";
+
+            }
+
+        });
+
+    </script>
+
+</body>
+
+</html>

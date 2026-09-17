@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Indicações - Queridin DI MINAS</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .topo {
+            background: #8B4A00;
+            color: white;
+            padding: 30px;
+        }
+
+        .topo h2 {
+            margin: 0;
+        }
+
+        .conteudo {
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 1200px;
+            margin: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #8B4A00;
+        }
+
+        .botao {
+            display: inline-block;
+            background: #8B4A00;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-bottom: 25px;
+        }
+
+        .botao:hover {
+            background: #6f3a00;
+        }
+
+        .tabela-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #8B4A00;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .botao-excluir {
+            background: #c62828;
+            color: white;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .botao-editar {
+            display: inline-block;
+            background: #8B4A00;
+            color: white;
+            padding: 7px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 13px;
+            margin-right: 5px;
+        }
+
+        .botao-editar:hover {
+            background: #6f3a00;
+        }
+
+        .botao-excluir:hover {
+            background: #a61c1c;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="topo">
+        <h2>Queridin DI MINAS</h2>
+    </div>
+
+    <div class="conteudo">
+
+        <div class="card">
+
+            <h1>Indicações</h1>
+
+            <p>
+                Gerenciamento das indicações de produtos realizadas
+                pelos colaboradores participantes do programa.
+            </p>
+
+            <a href="/nova_indicacao" class="botao">
+                + Nova Indicação
+            </a>
+
+            <div class="tabela-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Cliente</th>
+                            <th>Produto</th>
+                            <th>Data</th>
+                            <th>Situação</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="lista-indicacoes">
+
+                        <tr>
+                            <td colspan="7">
+                                Nenhuma indicação cadastrada.
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+    <script>
+        async function carregarIndicacoes() {
+
+            const resposta = await fetch("/api/indicacoes");
+            const indicacoes = await resposta.json();
+
+            const lista = document.getElementById("lista-indicacoes");
+            lista.innerHTML = "";
+            if (indicacoes.length === 0) {
+                lista.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            Nenhuma indicação cadastrada.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            indicacoes.forEach(indicacao => {
+
+                const linha = document.createElement("tr");
+
+                linha.innerHTML = `
+                    <td>${indicacao.colaborador || ""}</td>
+
+                    <td>${indicacao.cliente || ""}</td>
+
+                    <td>${indicacao.produto || ""}</td>
+
+                    <td>${indicacao.data_indicacao || ""}</td>
+
+                    <td>${indicacao.situacao || ""}</td>
+
+                    <td>
+                        R$ ${Number(indicacao.valor_indicacao || 0)
+                        .toFixed(2)
+                        .replace(".", ",")}
+                    </td>
+
+                    <td>
+
+    <a
+        href="/editar_indicacao/${indicacao.id}"
+        class="botao-editar"
+    >
+        ✏️ Editar
+    </a>
+
+    <form
+        action="/excluir_indicacao/${indicacao.id}"
+        method="post"
+        style="display: inline;"
+        onsubmit="return confirm('Tem certeza que deseja excluir esta indicação?');"
+    >
+
+        <button
+            type="submit"
+            class="botao-excluir"
+        >
+            🗑️ Excluir
+        </button>
+
+    </form>
+
+</td>
+                `;
+
+                lista.appendChild(linha);
+
+            });
+        }
+
+        carregarIndicacoes();
+    </script>
+</body>
+
+</html>

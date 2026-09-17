@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Queridin DI MINAS - Dashboard</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #fff8ed;
+            color: #3b2418;
+        }
+
+        /* =========================
+           MENU LATERAL
+        ========================= */
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 240px;
+            height: 100vh;
+            background: #7b3f00;
+            color: white;
+            padding: 25px 15px;
+        }
+
+        /* LOGO */
+
+        .logo {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .logo-img {
+            width: 150px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* MENU */
+
+        .menu {
+            list-style: none;
+        }
+
+        .menu li {
+            margin-bottom: 8px;
+        }
+
+        .menu a {
+            display: block;
+            padding: 13px 15px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+
+        .menu a:hover {
+            background: #a85d17;
+        }
+
+        /* =========================
+           CONTEÚDO
+        ========================= */
+
+        .content {
+            margin-left: 240px;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        /* TOPO */
+
+        .topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .topo h2 {
+            color: #7b3f00;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .topo p {
+            color: #765b4a;
+            font-size: 15px;
+        }
+
+        .usuario {
+            background: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            color: #7b3f00;
+            font-weight: bold;
+        }
+
+        /* =========================
+           CARDS
+        ========================= */
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .card .icone {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .card h3 {
+            font-size: 15px;
+            color: #765b4a;
+            margin-bottom: 8px;
+        }
+
+        .numero {
+            font-size: 26px;
+            font-weight: bold;
+            color: #7b3f00;
+        }
+
+        /* =========================
+           PAINÉIS
+        ========================= */
+
+        .painel {
+            background: white;
+            padding: 25px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .painel h3 {
+            color: #7b3f00;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        /* =========================
+           ACESSO RÁPIDO
+        ========================= */
+
+        .acoes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .acao {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 18px;
+            border: 1px solid #ead8c4;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #3b2418;
+            transition: 0.2s;
+        }
+
+        .acao:hover {
+            background: #fff3df;
+            transform: translateY(-2px);
+        }
+
+        .acao .icone {
+            font-size: 30px;
+        }
+
+        .acao strong {
+            color: #7b3f00;
+            font-size: 16px;
+        }
+
+        .acao span {
+            color: #765b4a;
+            font-size: 13px;
+        }
+
+        /* =========================
+           STATUS
+        ========================= */
+
+        .status {
+            color: #3b2418;
+            font-size: 15px;
+        }
+
+        .status p {
+            margin-bottom: 10px;
+        }
+
+        /* =========================
+           RODAPÉ
+        ========================= */
+
+        .rodape {
+            text-align: center;
+            color: #8a7465;
+            font-size: 13px;
+            padding: 20px 0;
+        }
+
+        /* =========================
+           RESPONSIVO
+        ========================= */
+
+        @media (max-width: 1000px) {
+
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .acoes {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 700px) {
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
+
+            .content {
+                margin-left: 0;
+            }
+
+            .cards,
+            .acoes {
+                grid-template-columns: 1fr;
+            }
+
+            .topo {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+f
+
+<body>
+
+    <!-- =========================
+         MENU LATERAL
+    ========================= -->
+
+    <aside class="sidebar">
+
+        <div class="logo">
+            <img src="/static/img/logo.png" alt="Queridin DI MINAS" class="logo-img">
+        </div>
+
+        <ul class="menu">
+
+            <li>
+                <a href="/">
+                    🏠 Dashboard
+                </a>
+            </li>
+
+            <li>
+                <a href="/produtos">
+                    📦 Produtos
+                </a>
+            </li>
+
+            <li>
+                <a href="/pedidos">
+                    🛒 Pedidos
+                </a>
+            </li>
+
+            <li>
+                <a href="/clientes">
+                    👥 Clientes
+                </a>
+            </li>
+
+            <li>
+                <a href="/estoque">
+                    📊 Estoque
+                </a>
+            </li>
+
+            <li>
+                <a href="/financeiro">
+                    💰 Financeiro
+                </a>
+            </li>
+
+            <li>
+                <a href="/relatorios">
+                    📈 Relatórios
+                </a>
+            </li>
+
+        </ul>
+
+    </aside>
+
+
+    <!-- =========================
+         CONTEÚDO PRINCIPAL
+    ========================= -->
+
+    <main class="content">
+
+        <!-- TOPO -->
+
+        <div class="topo">
+
+            <div>
+                <h2>Dashboard</h2>
+
+                <p>
+                    Bem-vindo ao Sistema Pão de Queijo
+                </p>
+            </div>
+
+            <div class="usuario">
+                👤 Administrador
+            </div>
+
+        </div>
+
+
+        <!-- =========================
+             CARDS
+        ========================= -->
+
+        <section class="cards">
+
+            <div class="card">
+
+                <div class="icone">
+                    📦
+                </div>
+
+                <h3>
+                    Produtos cadastrados
+                </h3>
+
+                <div class="numero">
+                    <span id="total-produtos">0</span>
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="icone">
+                    🛒
+                </div>
+
+                <h3>
+                    Pedidos
+                </h3>
+
+                <div class="numero">
+                    <span id="total-pedidos">0</span>
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="icone">
+
+                    👥
+                </div>
+
+
+                <h3>
+                    Clientes
+                </h3>
+
+                <div class="numero">
+                    <span id="total-clientes">0</span>
+                </div>
+
+            </div>
+            <div class="card">
+
+                <div class="icone">
+                    💰
+                </div>
+
+                <h3>
+                    Vendas
+                </h3>
+
+                <div class="numero">
+                    <span id="total-vendas">R$ 0,00</span>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             ACESSO RÁPIDO
+        ========================= -->
+
+        <section class="painel">
+
+            <h3>
+                Acesso rápido
+            </h3>
+
+            <div class="acoes">
+
+                <a href="/produtos" class="acao">
+
+                    <div class="icone">
+                        📦
+                    </div>
+
+                    <strong>
+                        Produtos
+                    </strong>
+
+                    <span>
+                        Consultar produtos e estoque
+                    </span>
+
+                </a>
+
+
+                <a href="/pedidos" class="acao">
+
+                    <div class="icone">
+                        🛒
+                    </div>
+
+                    <strong>
+                        Pedidos
+                    </strong>
+
+                    <span>
+                        Visualizar pedidos realizados
+                    </span>
+
+                </a>
+
+
+                <a href="#" class="acao">
+
+                    <div class="icone">
+                        👥
+                    </div>
+
+                    <strong>
+                        Clientes
+                    </strong>
+
+                    <span>
+                        Cadastrar e consultar clientes
+                    </span>
+
+                </a>
+
+
+                <a href="#" class="acao">
+
+                    <div class="icone">
+                        📊
+                    </div>
+
+                    <strong>
+                        Estoque
+                    </strong>
+
+                    <span>
+                        Acompanhar movimentações
+                    </span>
+
+                </a>
+
+
+                <a href="#" class="acao">
+
+                    <div class="icone">
+                        💰
+                    </div>
+
+                    <strong>
+                        Financeiro
+                    </strong>
+
+                    <span>
+                        Acompanhar vendas e valores
+                    </span>
+
+                </a>
+
+
+                <a href="#" class="acao">
+
+                    <div class="icone">
+                        📈
+                    </div>
+
+                    <strong>
+                        Relatórios
+                    </strong>
+
+                    <span>
+                        Consultar informações gerenciais
+                    </span>
+
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             STATUS DO SISTEMA
+        ========================= -->
+
+        <section class="painel">
+
+            <h3>
+                Status do sistema
+            </h3>
+
+            <div class="status">
+
+                <p>
+                    🟢 Sistema online
+                </p>
+
+                <p>
+                    🟢 Banco de dados conectado
+                </p>
+
+                <p>
+                    🟢 API funcionando
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- RODAPÉ -->
+
+        <div class="rodape">
+            Sistema Pão de Queijo • Gestão de vendas e estoque
+        </div>
+
+    </main>
+
+
+    <script>
+        async function carregarDashboard() {
+            try {
+                const resposta = await fetch("/api/dashboard");
+                const dados = await resposta.json();
+
+                document.getElementById("total-produtos").textContent =
+                    dados.total_produtos;
+
+                document.getElementById("total-pedidos").textContent =
+                    dados.total_pedidos;
+
+                document.getElementById("total-clientes").textContent =
+                    dados.total_clientes;
+
+                document.getElementById("total-vendas").textContent =
+                    dados.total_vendas.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+
+            } catch (erro) {
+                console.error("Erro ao carregar dashboard:", erro);
+            }
+        }
+
+        carregarDashboard();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+backup_banco_pao_de_queijo.sql

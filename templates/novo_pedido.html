@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Novo Pedido - Queridin DI MINAS</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f8f4ee;
+            color: #333;
+        }
+
+        /* =========================
+           MENU LATERAL
+        ========================= */
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+
+            background: linear-gradient(180deg,
+                    #4a2508,
+                    #2f1806);
+
+            color: white;
+            padding: 25px 18px;
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .logo {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+
+            padding: 14px 16px;
+
+            color: white;
+            text-decoration: none;
+
+            border-radius: 8px;
+
+            font-size: 16px;
+        }
+
+        .menu a:hover {
+            background: rgba(255, 255, 255, 0.10);
+        }
+
+        .menu a.ativo {
+            background: #c77700;
+        }
+
+        .menu-icone {
+            width: 25px;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        /* =========================
+           ÁREA PRINCIPAL
+        ========================= */
+
+        .main {
+            margin-left: 260px;
+            min-height: 100vh;
+        }
+
+        /* =========================
+           TOPO
+        ========================= */
+
+        .topbar {
+            height: 80px;
+            background: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 35px;
+
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .menu-toggle {
+            font-size: 25px;
+            color: #995400;
+        }
+
+        .usuario {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .usuario-icone {
+            width: 45px;
+            height: 45px;
+
+            border-radius: 50%;
+
+            background: #b86b00;
+            color: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 22px;
+        }
+
+        .usuario strong {
+            display: block;
+        }
+
+        .usuario small {
+            color: #777;
+        }
+
+        /* =========================
+           CONTEÚDO
+        ========================= */
+
+        .conteudo {
+            padding: 40px;
+        }
+
+        .cabecalho-pagina {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 30px;
+        }
+
+        .titulo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .titulo-icone {
+            width: 55px;
+            height: 55px;
+
+            background: #b86b00;
+            color: white;
+
+            border-radius: 10px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 28px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #995400;
+            font-size: 34px;
+        }
+
+        .subtitulo {
+            margin: 5px 0 0;
+            color: #555;
+            font-size: 17px;
+        }
+
+        .botao-voltar {
+            border: 1px solid #d5a05d;
+            background: white;
+
+            color: #995400;
+
+            padding: 12px 20px;
+
+            border-radius: 7px;
+
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .botao-voltar:hover {
+            background: #fff7eb;
+        }
+
+        /* =========================
+           CARDS
+        ========================= */
+
+        .card {
+            background: white;
+
+            border-radius: 12px;
+
+            padding: 30px;
+
+            margin-bottom: 25px;
+
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-titulo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            margin-bottom: 25px;
+        }
+
+        .card-titulo span {
+            font-size: 24px;
+        }
+
+        .card-titulo h2 {
+            margin: 0;
+            color: #995400;
+            font-size: 24px;
+        }
+
+        /* =========================
+           FORMULÁRIO
+        ========================= */
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #444;
+        }
+
+        select,
+        input {
+            width: 100%;
+
+            height: 48px;
+
+            border: 1px solid #ccc;
+            border-radius: 7px;
+
+            padding: 0 14px;
+
+            font-size: 16px;
+
+            background: white;
+        }
+
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: #b86b00;
+        }
+
+        .cliente-campo {
+            max-width: 520px;
+        }
+
+        .linha-produto {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 20px;
+
+            align-items: end;
+        }
+
+        .preco {
+            background: #f5f5f5;
+        }
+
+        .botao-adicionar {
+            margin-top: 20px;
+
+            background: #b86b00;
+            color: white;
+
+            border: none;
+
+            padding: 13px 25px;
+
+            border-radius: 7px;
+
+            font-size: 16px;
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .botao-adicionar:hover {
+            background: #995400;
+        }
+
+        /* =========================
+           TABELA
+        ========================= */
+
+        .tabela-itens {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+        }
+
+        .tabela-itens th {
+            background: #995400;
+            color: white;
+
+            padding: 14px;
+
+            text-align: left;
+        }
+
+        .tabela-itens td {
+            padding: 14px;
+
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tabela-itens tr:nth-child(even) {
+            background: #f8f8f8;
+        }
+
+        .sem-itens {
+            text-align: center;
+            color: #777;
+            padding: 25px;
+        }
+
+        /* =========================
+           TOTAL
+        ========================= */
+
+        .resumo {
+            display: flex;
+            justify-content: flex-end;
+
+            margin-top: 25px;
+        }
+
+        .total-box {
+            min-width: 300px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            padding: 18px 25px;
+
+            background: #fff8eb;
+
+            border: 1px solid #e5c28e;
+
+            border-radius: 8px;
+
+            color: #995400;
+
+            font-size: 20px;
+        }
+
+        /* =========================
+           BOTÃO FINAL
+        ========================= */
+
+        .acoes {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+
+            margin-top: 25px;
+        }
+
+        .botao-cancelar {
+            background: white;
+            color: #995400;
+
+            border: 1px solid #d5a05d;
+
+            padding: 13px 25px;
+
+            border-radius: 7px;
+
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .botao-salvar {
+            background: #b86b00;
+            color: white;
+
+            border: none;
+
+            padding: 13px 30px;
+
+            border-radius: 7px;
+
+            font-size: 16px;
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .botao-salvar:hover {
+            background: #995400;
+        }
+
+        /* =========================
+           RESPONSIVO
+        ========================= */
+
+        @media (max-width: 900px) {
+
+            .sidebar {
+                width: 220px;
+            }
+
+            .main {
+                margin-left: 220px;
+            }
+
+            .linha-produto {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+         MENU LATERAL
+    ========================= -->
+
+    <aside class="sidebar">
+
+        <div class="logo-area">
+
+            <!--
+                COLOQUE A IMAGEM DO LOGOTIPO
+                NA PASTA static/img e use o caminho abaixo.
+            -->
+
+            <img src="/static/img/logo.png" alt="Queridin DI MINAS" class="logo">
+
+        </div>
+
+        <nav class="menu">
+
+            <a href="/">
+                <span class="menu-icone">🏠</span>
+                Dashboard
+            </a>
+
+            <a href="/pedidos" class="ativo">
+                <span class="menu-icone">🛒</span>
+                Pedidos
+            </a>
+
+            <a href="#">
+                <span class="menu-icone">👤</span>
+                Clientes
+            </a>
+
+            <a href="/produtos">
+                <span class="menu-icone">📦</span>
+                Produtos
+            </a>
+
+            <a href="#">
+                <span class="menu-icone">📊</span>
+                Estoque
+            </a>
+
+            <a href="#">
+                <span class="menu-icone">💰</span>
+                Financeiro
+            </a>
+
+            <a href="#">
+                <span class="menu-icone">📈</span>
+                Relatórios
+            </a>
+
+            <a href="#">
+                <span class="menu-icone">👥</span>
+                Colaboradores
+            </a>
+
+            <a href="#">
+                <span class="menu-icone">⚙️</span>
+                Configurações
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+    <!-- =========================
+         ÁREA PRINCIPAL
+    ========================= -->
+
+    <main class="main">
+
+        <header class="topbar">
+
+            <div class="menu-toggle">
+                ☰
+            </div>
+
+            <div class="usuario">
+
+                <div class="usuario-icone">
+                    👤
+                </div>
+
+                <div>
+                    <strong>Administrador</strong>
+                    <small>Administrador</small>
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <section class="conteudo">
+
+            <!-- CABEÇALHO -->
+
+            <div class="cabecalho-pagina">
+
+                <div class="titulo-area">
+
+                    <div class="titulo-icone">
+                        🛒
+                    </div>
+
+                    <div>
+
+                        <h1>Novo Pedido</h1>
+
+                        <p class="subtitulo">
+                            Cadastre um novo pedido
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <a href="/pedidos" class="botao-voltar">
+                    ← Voltar para Pedidos
+                </a>
+
+            </div>
+
+
+            <!-- DADOS DO CLIENTE -->
+
+            <div class="card">
+
+                <div class="card-titulo">
+
+                    <span>👤</span>
+
+                    <h2>Dados do cliente</h2>
+
+                </div>
+
+                <div class="cliente-campo campo">
+
+                    <label for="cliente">
+                        Cliente
+                    </label>
+
+                    <select id="cliente">
+
+                        <option value="">
+                            Selecione o cliente
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <!-- ADICIONAR PRODUTO -->
+
+            <div class="card">
+
+                <div class="card-titulo">
+
+                    <span>📦</span>
+
+                    <h2>Adicionar produto</h2>
+
+                </div>
+
+
+                <div class="linha-produto">
+
+                    <div class="campo">
+
+                        <label for="produto">
+                            Produto
+                        </label>
+
+                        <select id="produto">
+
+                            <option value="">
+                                Selecione o produto
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="campo">
+
+                        <label for="quantidade">
+                            Quantidade
+                        </label>
+
+                        <input type="number" id="quantidade" min="1" value="1">
+
+                    </div>
+
+
+                    <div class="campo">
+
+                        <label for="preco">
+                            Preço unitário
+                        </label>
+
+                        <input type="text" id="preco" class="preco" value="R$ 0,00" readonly>
+
+                    </div>
+
+                </div>
+
+
+                <button type="button" class="botao-adicionar" onclick="adicionarProduto()">
+                    + Adicionar produto
+                </button>
+
+
+                <!-- TABELA DOS PRODUTOS -->
+
+                <table class="tabela-itens">
+
+                    <thead>
+
+                        <tr>
+                            <th>Produto</th>
+                            <th>Quantidade</th>
+                            <th>Preço unitário</th>
+                            <th>Subtotal</th>
+                            <th>Ação</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="tabelaItens">
+
+                        <tr>
+                            <td colspan="5" class="sem-itens">
+                                Nenhum produto adicionado.
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+
+                <!-- TOTAL -->
+
+                <div class="resumo">
+
+                    <div class="total-box">
+
+                        <span>
+                            Total do pedido:
+                        </span>
+
+                        <strong id="totalPedido">
+                            R$ 0,00
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <!-- AÇÕES -->
+
+                <div class="acoes">
+
+                    <button type="button" class="botao-cancelar" onclick="window.location.href='/pedidos'">
+                        Cancelar
+                    </button>
+
+                    <button type="button" class="botao-salvar" onclick="salvarPedido()">
+                        Salvar Pedido
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script>
+
+        // ==========================================
+        // VARIÁVEIS
+        // ==========================================
+
+        let itensPedido = [];
+        let produtos = [];
+
+
+        // ==========================================
+        // CARREGAR CLIENTES
+        // ==========================================
+        async function carregarClientes() {
+            try {
+                const resposta = await fetch("/api/clientes");
+                const clientes = await resposta.json();
+
+                const selectCliente =
+                    document.getElementById("cliente");
+
+                selectCliente.innerHTML =
+                    '<option value="">Selecione o cliente</option>';
+
+                clientes.forEach(cliente => {
+
+                    const option =
+                        document.createElement("option");
+
+                    // IMPORTANTE:
+                    // envia o ID do cliente para o backend
+                    option.value = cliente.id;
+
+                    option.textContent =
+                        cliente.nome +
+                        (cliente.telefone
+                            ? " - " + cliente.telefone
+                            : "");
+
+                    selectCliente.appendChild(option);
+                });
+
+            } catch (erro) {
+
+                console.error(
+                    "Erro ao carregar clientes:",
+                    erro
+                );
+
+                alert(
+                    "Não foi possível carregar os clientes."
+                );
+            }
+        }
+
+
+        // ==========================================
+        // CARREGAR PRODUTOS
+        // ==========================================
+
+        async function carregarProdutos() {
+
+            try {
+
+                const resposta =
+                    await fetch("/api/produtos");
+
+                produtos = await resposta.json();
+
+                const selectProduto =
+                    document.getElementById("produto");
+
+                selectProduto.innerHTML =
+                    '<option value="">Selecione o produto</option>';
+
+                produtos.forEach(produto => {
+
+                    const option =
+                        document.createElement("option");
+
+                    option.value = produto.id;
+
+                    option.textContent =
+                        produto.nome;
+
+                    selectProduto.appendChild(option);
+
+                });
+
+            } catch (erro) {
+
+                console.error(
+                    "Erro ao carregar produtos:",
+                    erro
+                );
+
+                alert(
+                    "Não foi possível carregar os produtos."
+                );
+            }
+        }
+
+
+        // ==========================================
+        // ATUALIZAR PREÇO DO PRODUTO
+        // ==========================================
+
+        document
+            .getElementById("produto")
+            .addEventListener("change", function () {
+
+                const produtoId =
+                    Number(this.value);
+
+                const produto =
+                    produtos.find(
+                        p => Number(p.id) === produtoId
+                    );
+
+                const campoPreco =
+                    document.getElementById("preco");
+
+                if (produto) {
+
+                    const preco =
+                        Number(produto.preco);
+
+                    campoPreco.value =
+                        preco.toLocaleString(
+                            "pt-BR",
+                            {
+                                style: "currency",
+                                currency: "BRL"
+                            }
+                        );
+
+                } else {
+
+                    campoPreco.value =
+                        "R$ 0,00";
+                }
+
+            });
+
+
+        // ==========================================
+        // ADICIONAR PRODUTO
+        // ==========================================
+
+        function adicionarProduto() {
+
+            const produtoSelect =
+                document.getElementById("produto");
+
+            const quantidadeInput =
+                document.getElementById("quantidade");
+
+            const produtoId =
+                Number(produtoSelect.value);
+
+            const quantidade =
+                Number(quantidadeInput.value);
+
+            if (!produtoId) {
+
+                alert(
+                    "Selecione um produto."
+                );
+
+                return;
+            }
+
+            if (!quantidade || quantidade < 1) {
+
+                alert(
+                    "Informe uma quantidade válida."
+                );
+
+                return;
+            }
+
+            const produto =
+                produtos.find(
+                    p => Number(p.id) === produtoId
+                );
+
+            if (!produto) {
+
+                alert(
+                    "Produto não encontrado."
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------
+            // VERIFICAR SE O PRODUTO JÁ EXISTE
+            // ------------------------------------------
+
+            const itemExistente =
+                itensPedido.find(
+                    item =>
+                        Number(item.produto_id) === produtoId
+                );
+
+
+            if (itemExistente) {
+
+                itemExistente.quantidade += quantidade;
+
+            } else {
+
+                itensPedido.push({
+
+                    produto_id: produtoId,
+
+                    nome: produto.nome,
+
+                    quantidade: quantidade,
+
+                    preco_unitario:
+                        Number(produto.preco)
+
+                });
+
+            }
+
+
+            atualizarTabela();
+
+
+            // ------------------------------------------
+            // LIMPAR CAMPOS
+            // ------------------------------------------
+
+            produtoSelect.value = "";
+
+            quantidadeInput.value = 1;
+
+            document.getElementById("preco").value =
+                "R$ 0,00";
+
+        }
+
+
+        // ==========================================
+        // ATUALIZAR TABELA
+        // ==========================================
+
+        function atualizarTabela() {
+
+            const tabela =
+                document.getElementById(
+                    "tabelaItens"
+                );
+
+            tabela.innerHTML = "";
+
+
+            if (itensPedido.length === 0) {
+
+                tabela.innerHTML = `
+                <tr>
+                    <td
+                        colspan="5"
+                        class="sem-itens"
+                    >
+                        Nenhum produto adicionado.
+                    </td>
+                </tr>
+            `;
+
+                atualizarTotal();
+
+                return;
+            }
+
+
+            itensPedido.forEach(
+                (item, indice) => {
+
+                    const subtotal =
+                        item.quantidade *
+                        item.preco_unitario;
+
+
+                    const linha =
+                        document.createElement("tr");
+
+
+                    linha.innerHTML = `
+
+                    <td>
+                        ${item.nome}
+                    </td>
+
+                    <td>
+                        ${item.quantidade}
+                    </td>
+
+                    <td>
+                        ${formatarMoeda(
+                        item.preco_unitario
+                    )}
+                    </td>
+
+                    <td>
+                        ${formatarMoeda(
+                        subtotal
+                    )}
+                    </td>
+
+                    <td>
+
+                        <button
+                            type="button"
+                            onclick="removerProduto(${indice})"
+                            style="
+                                background:#b3261e;
+                                color:white;
+                                border:none;
+                                padding:8px 12px;
+                                border-radius:6px;
+                                cursor:pointer;
+                            "
+                        >
+                            🗑 Remover
+                        </button>
+
+                    </td>
+                `;
+
+
+                    tabela.appendChild(linha);
+
+                }
+            );
+
+
+            atualizarTotal();
+        }
+
+
+        // ==========================================
+        // REMOVER PRODUTO
+        // ==========================================
+
+        function removerProduto(indice) {
+
+            itensPedido.splice(
+                indice,
+                1
+            );
+
+            atualizarTabela();
+        }
+
+
+        // ==========================================
+        // CALCULAR TOTAL
+        // ==========================================
+
+        function atualizarTotal() {
+
+            let total = 0;
+
+
+            itensPedido.forEach(item => {
+
+                total +=
+                    item.quantidade *
+                    item.preco_unitario;
+
+            });
+
+
+            document.getElementById(
+                "totalPedido"
+            ).textContent =
+                formatarMoeda(total);
+        }
+
+
+        // ==========================================
+        // FORMATAR MOEDA
+        // ==========================================
+
+        function formatarMoeda(valor) {
+
+            return Number(valor).toLocaleString(
+                "pt-BR",
+                {
+                    style: "currency",
+                    currency: "BRL"
+                }
+            );
+        }
+
+
+        // ==========================================
+        // SALVAR PEDIDO
+        // ==========================================
+
+        async function salvarPedido() {
+
+            const cliente =
+                document.getElementById(
+                    "cliente"
+                ).value;
+
+
+            if (!cliente) {
+
+                alert(
+                    "Selecione um cliente."
+                );
+
+                return;
+            }
+
+
+            if (itensPedido.length === 0) {
+
+                alert(
+                    "Adicione pelo menos um produto."
+                );
+
+                return;
+            }
+
+            const dados = {
+                cliente_id: cliente,
+                itens: itensPedido.map(item => ({
+                    produto_id: item.produto_id,
+                    quantidade: item.quantidade
+                }))
+            };
+
+            try {
+
+                const resposta =
+                    await fetch(
+                        "/api/pedidos",
+                        {
+
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(dados)
+                        }
+                    );
+
+
+                const resultado =
+                    await resposta.json();
+
+
+                if (resultado.erro) {
+
+                    alert(
+                        "Erro: " +
+                        resultado.erro
+                    );
+
+                    return;
+                }
+
+
+                alert(
+                    "Pedido #" +
+                    resultado.pedido_id +
+                    " criado com sucesso!"
+                );
+
+
+                window.location.href =
+                    "/pedidos";
+
+
+            } catch (erro) {
+
+                console.error(erro);
+
+                alert(
+                    "Erro ao salvar o pedido."
+                );
+
+            }
+
+        }
+
+
+        // ==========================================
+        // INICIALIZAÇÃO
+        // ==========================================
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                carregarClientes();
+
+                carregarProdutos();
+
+                atualizarTabela();
+
+            }
+        );
+
+    </script>
+
+
+</body>
+
+</html>

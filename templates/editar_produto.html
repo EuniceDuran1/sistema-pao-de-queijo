@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Editar Produto - Sistema Pão de Queijo</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f1eb;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background-color: white;
+            padding: 35px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        h1 {
+            color: #8B4A00;
+            margin-bottom: 10px;
+        }
+
+        .subtitulo {
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .botoes {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button,
+        .cancelar {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        button {
+            background-color: #8B4A00;
+            color: white;
+        }
+
+        button:hover {
+            background-color: #6f3a00;
+        }
+
+        .cancelar {
+            background-color: #777;
+            color: white;
+        }
+
+        .cancelar:hover {
+            background-color: #555;
+        }
+
+        .mensagem {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>✏️ Editar Produto</h1>
+
+        <p class="subtitulo">
+            Altere os dados do produto e clique em salvar.
+        </p>
+
+        <form id="form-editar">
+
+            <label for="nome">Nome do produto</label>
+            <input type="text" id="nome" name="nome" required>
+
+            <label for="descricao">Descrição</label>
+            <textarea id="descricao" name="descricao" required></textarea>
+
+            <label for="preco">Preço</label>
+            <input type="number" id="preco" name="preco" step="0.01" min="0" required>
+
+            <label for="estoque">Estoque</label>
+            <input type="number" id="estoque" name="estoque" min="0" required>
+
+            <div class="botoes">
+
+                <button type="submit">
+                    💾 Salvar alterações
+                </button>
+
+                <a href="/produtos" class="cancelar">
+                    ← Cancelar
+                </a>
+
+            </div>
+
+        </form>
+
+        <div id="mensagem" class="mensagem"></div>
+
+    </div>
+
+    <script>
+
+        // Pega o ID do produto pela URL
+        const partes = window.location.pathname.split("/");
+        const produtoId = partes[partes.length - 1];
+
+        // Carrega os dados do produto
+        async function carregarProduto() {
+
+            try {
+
+                const resposta = await fetch(`/api/produtos/${produtoId}`);
+
+                if (!resposta.ok) {
+                    throw new Error("Produto não encontrado.");
+                }
+
+                const produto = await resposta.json();
+
+                document.getElementById("nome").value = produto.nome;
+                document.getElementById("descricao").value = produto.descricao;
+                document.getElementById("preco").value = produto.preco;
+                document.getElementById("estoque").value = produto.estoque;
+
+            } catch (erro) {
+
+                mostrarMensagem(
+                    "Erro ao carregar o produto: " + erro.message,
+                    true
+                );
+
+            }
+
+        }
+
+        // Salvar alterações
+        document.getElementById("form-editar").addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                const dados = {
+                    nome: document.getElementById("nome").value,
+                    descricao: document.getElementById("descricao").value,
+                    preco: document.getElementById("preco").value,
+                    estoque: document.getElementById("estoque").value
+                };
+
+                try {
+
+                    const resposta = await fetch(
+                        `/api/produtos/${produtoId}`,
+                        {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(dados)
+                        }
+                    );
+
+                    if (!resposta.ok) {
+                        throw new Error("Não foi possível salvar.");
+                    }
+
+                    window.location.href = "/produtos";
+
+                } catch (erro) {
+
+                    mostrarMensagem(
+                        "Erro ao salvar: " + erro.message,
+                        true
+                    );
+
+                }
+
+            }
+        );
+
+        function mostrarMensagem(texto, erro = false) {
+
+            const mensagem = document.getElementById("mensagem");
+
+            mensagem.style.display = "block";
+            mensagem.textContent = texto;
+
+            if (erro) {
+                mensagem.style.backgroundColor = "#f8d7da";
+                mensagem.style.color = "#721c24";
+            } else {
+                mensagem.style.backgroundColor = "#d4edda";
+                mensagem.style.color = "#155724";
+            }
+
+        }
+
+        carregarProduto();
+
+    </script>
+
+</body>
+
+</html>

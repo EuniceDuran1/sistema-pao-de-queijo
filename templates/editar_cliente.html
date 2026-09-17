@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Cliente - Sistema Pão de Queijo</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f8f1e7;
+            color: #5b2c06;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: #8b4a00;
+            color: white;
+            padding: 30px 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+
+        .logo img {
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+        }
+
+        .menu a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 15px 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+        }
+
+        .menu a:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .conteudo {
+            flex: 1;
+            padding: 40px;
+        }
+
+        .cabecalho {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #8b4a00;
+        }
+
+        .usuario {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .formulario {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 850px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .campo {
+            margin-bottom: 22px;
+        }
+
+        .campo label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #5b2c06;
+        }
+
+        .campo input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #d9c2a8;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .campo input:focus {
+            border-color: #8b4a00;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .botao {
+            border: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .salvar {
+            background: #8b4a00;
+            color: white;
+        }
+
+        .salvar:hover {
+            background: #6f3b00;
+        }
+
+        .cancelar {
+            background: #eee;
+            color: #5b2c06;
+        }
+
+        .cancelar:hover {
+            background: #ddd;
+        }
+
+        .mensagem {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .rodape {
+            margin-top: 30px;
+            text-align: center;
+            color: #8b6b4a;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="layout">
+
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <img src="/static/img/logo.png" alt="Queridin DI MINAS">
+            </div>
+
+            <nav class="menu">
+                <a href="/">🏠 Dashboard</a>
+                <a href="/produtos">📦 Produtos</a>
+                <a href="/pedidos">🛒 Pedidos</a>
+                <a href="/clientes">👥 Clientes</a>
+                <a href="/estoque">📊 Estoque</a>
+                <a href="#">💰 Financeiro</a>
+                <a href="#">📈 Relatórios</a>
+            </nav>
+
+        </aside>
+
+        <!-- CONTEÚDO -->
+        <main class="conteudo">
+
+            <div class="cabecalho">
+
+                <div>
+                    <h1>Editar Cliente</h1>
+                    <p>Alteração dos dados do cliente</p>
+                </div>
+
+                <div class="usuario">
+                    👤 Administrador
+                </div>
+
+            </div>
+
+            <div class="formulario">
+
+                <form id="form-editar-cliente">
+
+                    <div class="campo">
+                        <label for="nome">Nome *</label>
+                        <input type="text" id="nome" name="nome" placeholder="Digite o nome do cliente" required>
+                    </div>
+
+                    <div class="campo">
+                        <label for="telefone">Telefone</label>
+                        <input type="text" id="telefone" name="telefone" placeholder="Digite o telefone">
+                    </div>
+
+                    <div class="campo">
+                        <label for="endereco">Endereço</label>
+                        <input type="text" id="endereco" name="endereco" placeholder="Digite o endereço">
+                    </div>
+
+                    <div class="botoes">
+
+                        <button type="submit" class="botao salvar">
+                            💾 Salvar Alterações
+                        </button>
+
+                        <button type="button" class="botao cancelar" onclick="window.location.href='/clientes'">
+                            ↩ Cancelar
+                        </button>
+
+                    </div>
+
+                    <div id="mensagem" class="mensagem"></div>
+
+                </form>
+
+            </div>
+
+            <div class="rodape">
+                Sistema Pão de Queijo • Gestão de vendas e estoque
+            </div>
+
+        </main>
+
+
+    </div>
+
+    <script>
+        async function carregarCliente() {
+            const partes = window.location.pathname.split("/");
+            const clienteId = partes[partes.length - 1];
+
+            try {
+                const resposta = await fetch(`/api/clientes/${clienteId}`);
+                const cliente = await resposta.json();
+
+                document.getElementById("nome").value = cliente.nome || "";
+                document.getElementById("telefone").value = cliente.telefone || "";
+                document.getElementById("endereco").value = cliente.endereco || "";
+
+            } catch (erro) {
+                console.error("Erro ao carregar cliente:", erro);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", carregarCliente);
+        document.getElementById("form-editar-cliente").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const partes = window.location.pathname.split("/");
+            const clienteId = partes[partes.length - 1];
+
+            const dados = {
+                nome: document.getElementById("nome").value,
+                telefone: document.getElementById("telefone").value,
+                endereco: document.getElementById("endereco").value
+            };
+
+            const resposta = await fetch(`/api/clientes/${clienteId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dados)
+            });
+
+            const resultado = await resposta.json();
+
+            if (resultado.mensagem) {
+                window.location.href = "/clientes";
+            } else {
+                document.getElementById("mensagem").textContent = resultado.erro || "Erro ao atualizar cliente.";
+            }
+        });
+    </script>
+
+</body>
+
+</html>

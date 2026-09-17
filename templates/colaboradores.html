@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colaboradores - Queridin DI MINAS</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f5f5;
+        }
+
+        .cabecalho {
+            background: #8B4A00;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        .conteudo {
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #8B4A00;
+        }
+
+        .botao {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #8B4A00;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .botao:hover {
+            background: #6f3b00;
+        }
+
+        .tabela-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #8B4A00;
+            color: white;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="cabecalho">
+        <h2>Queridin DI MINAS</h2>
+    </div>
+
+    <div class="conteudo">
+
+        <div class="card">
+
+            <h1>Colaboradores</h1>
+
+            <p>
+                Gerenciamento dos colaboradores participantes
+                do programa de indicação de produtos.
+            </p>
+
+            <a href="/novo_colaborador" class="botao">+ Novo Colaborador</a>
+
+            <div class="tabela-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Telefone</th>
+                            <th>E-mail</th>
+                            <th>Chave PIX</th>
+                            <th>Situação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="lista-colaboradores">
+                        <tr>
+                            <td colspan="6">Carregando colaboradores...</td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+        <script>
+
+            async function carregarColaboradores() {
+
+                const resposta = await fetch("/api/colaboradores");
+
+                const colaboradores = await resposta.json();
+
+                const lista = document.getElementById("lista-colaboradores");
+
+                lista.innerHTML = "";
+
+                if (colaboradores.length === 0) {
+
+                    lista.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        Nenhum colaborador cadastrado.
+                    </td>
+                </tr>
+            `;
+
+                    return;
+                }
+
+                colaboradores.forEach(colaborador => {
+
+                    const linha = document.createElement("tr");
+
+                    linha.innerHTML = `
+    <td>${colaborador.nome || ""}</td>
+    <td>${colaborador.cpf || ""}</td>
+    <td>${colaborador.telefone || ""}</td>
+    <td>${colaborador.email || ""}</td>
+    <td>${colaborador.chave_pix || ""}</td>
+    <td>${colaborador.situacao || ""}</td>
+    <td>
+    <a href="/editar_colaborador/${colaborador.id}" class="botao">
+        Editar
+    </a>
+
+    <form action="/colaborador/${colaborador.id}/alterar_situacao" method="post" style="display:inline;">
+        <button type="submit" class="botao">
+            ${colaborador.situacao === "Ativo" ? "Inativar" : "Ativar"}
+        </button>
+    </form>
+</td>
+    </td>
+`;
+
+                    lista.appendChild(linha);
+
+                });
+            }
+
+            carregarColaboradores();
+
+        </script>
+</body>
+
+</html>
