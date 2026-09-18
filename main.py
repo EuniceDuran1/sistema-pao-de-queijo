@@ -1,4 +1,7 @@
 from fastapi import FastAPI, Form, Request
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import mysql.connector
@@ -18,12 +21,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def conectar_banco():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",
-        database="empresa_pao_de_queijo"
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME")
     )
-
 
 # ==========================================
 # CRIAR TABELA DE CLIENTES
