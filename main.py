@@ -1826,7 +1826,7 @@ def dados_financeiro(periodo: str = "todos"):
         resultado = cursor.fetchone()
         total_vendas = float(resultado["total_vendas"] or 0)
 
-        # ==========================================
+# ==        # ==========================================
         # TOTAL DE SAÍDAS
         # ==========================================
 
@@ -1838,8 +1838,46 @@ def dados_financeiro(periodo: str = "todos"):
         """)
 
         resultado = cursor.fetchone()
-        total_saidas = float(resultado["total_saidas"] or 0)
+        total_saidas_financeiras = float(resultado["total_saidas"] or 0)
 
+
+        # ==========================================
+        # TOTAL DE PAGAMENTOS A COLABORADORES
+        # ==========================================
+
+        filtro_pagamentos = ""
+
+        if periodo == "hoje":
+            filtro_pagamentos = """
+                AND DATE(data_pagamento) = CURDATE()
+            """
+
+        elif periodo == "7dias":
+            filtro_pagamentos = """
+                AND data_pagamento >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            """
+
+        elif periodo == "mes":
+            filtro_pagamentos = """
+                AND YEAR(data_pagamento) = YEAR(CURDATE())
+                AND MONTH(data_pagamento) = MONTH(CURDATE())
+            """
+
+        cursor.execute(f"""
+            SELECT COALESCE(SUM(valor), 0) AS total_pagamentos
+            FROM pagamentos
+            WHERE 1=1
+            {filtro_pagamentos}
+        """)
+
+        resultado = cursor.fetchone()
+        total_pagamentos = float(resultado["total_pagamentos"] or 0)
+
+        # ==========================================
+        # TOTAL DE SAÍDAS
+        # ==========================================
+
+        total_saidas = total_saidas_financeiras + total_pagamentos       
         # ==========================================
         # TOTAL DE ENTRADAS
         # ==========================================
