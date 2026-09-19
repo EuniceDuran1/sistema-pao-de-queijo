@@ -1702,7 +1702,7 @@ async def criar_pedido(request: Request):
             # Baixar estoque
             cursor.execute("""
                 UPDATE produtos
-                SET estoque = estoque + %s
+               SET estoque = estoque - %s
                 WHERE id = %s
             """, (
                 quantidade,
@@ -1721,7 +1721,7 @@ async def criar_pedido(request: Request):
                 VALUES
                 (
                     %s,
-                    'Entrada',
+                    'Saída',
                     %s,
                     %s
                 )
