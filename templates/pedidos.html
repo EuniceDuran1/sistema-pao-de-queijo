@@ -225,7 +225,17 @@
             cursor: pointer;
         }
 
-        .botao-detalhes:hover {
+        .botao-imprimir {
+            border: none;
+            background-color: #8b4a00;
+            color: white;
+            padding: 7px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .botao-imprimir:hover {
             background-color: #713d00;
         }
 
@@ -384,15 +394,20 @@
         </option>
     </select>
 </td>
-    </td>
-
+    
     <td>
-        <button
-            class="botao-detalhes"
-            onclick="verDetalhes(${pedido.id})">
-            👁️ Detalhes
-        </button>
-    </td>
+    <button
+        class="botao-detalhes"
+        onclick="verDetalhes(${pedido.id})">
+        👁️ Detalhes
+    </button>
+
+    <button
+        class="botao-imprimir"
+        onclick="window.location.href='/imprimir_pedido/${pedido.id}'">
+        🖨️ Imprimir
+    </button>
+</td>
 `;
                     tabela.appendChild(linha);
 

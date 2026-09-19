@@ -2102,6 +2102,69 @@ def detalhes_pedido(pedido_id: int):
     finally:
         cursor.close()
         banco.close()
+@app.get("/imprimir_pedido/{pedido_id}")
+def imprimir_pedido(pedido_id: int, request: Request):
+
+    banco = conectar_banco()
+    cursor = banco.cursor(dictionary=True)
+
+    try:
+        # Buscar dados do pedido e do cliente
+        cursor.execute("""
+            SELECT
+                pedidos.id,
+                pedidos.data_pedido,
+                pedidos.valor_total,
+                clientes.nome AS cliente_nome
+            FROM pedidos
+            INNER JOIN clientes
+                ON clientes.id = pedidos.cliente_id
+            WHERE pedidos.id = %s
+        """, (pedido_id,))
+
+        pedido = cursor.fetchone()
+
+        if pedido is None:
+            return RedirectResponse(
+                url="/pedidos",
+                status_code=303
+            )
+
+        # Buscar itens do pedido
+        cursor.execute("""
+            SELECT
+                i.quantidade,
+                p.nome AS produto_nome,
+                i.preco_unitario,
+                (i.quantidade * i.preco_unitario) AS subtotal
+            FROM itens_pedido i
+            INNER JOIN produtos p
+                ON p.id = i.produto_id
+            WHERE i.pedido_id = %s
+            ORDER BY i.id
+        """, (pedido_id,))
+
+        itens = cursor.fetchall()
+
+        for item in itens:
+            item["preco_unitario"] = float(item["preco_unitario"])
+            item["subtotal"] = float(item["subtotal"])
+
+        pedido["valor_total"] = float(pedido["valor_total"])
+
+        return templates.TemplateResponse(
+            request=request,
+            name="imprimir_pedido.html",
+            context={
+                "request": request,
+                "pedido": pedido,
+                "itens": itens
+            }
+        )
+
+    finally:
+        cursor.close()
+        banco.close()
 # ==========================================
 # API - ALTERAR STATUS DO PEDIDO
 # ==========================================
