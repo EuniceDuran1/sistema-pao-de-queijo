@@ -645,58 +645,7 @@ async def cadastrar_cliente(request: Request):
         banco.close()
 
 
-@app.get("/api/dashboard")
-def dados_dashboard(periodo: str = "todos"):
-    banco = conectar_banco()
-    cursor = banco.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM produtos")
-    total_produtos = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM clientes")
-    total_clientes = cursor.fetchone()[0]
-
-    filtro_data = ""
-
-    if periodo == "hoje":
-        filtro_data = "AND DATE(data_pedido) = CURDATE()"
-
-    elif periodo == "7dias":
-        filtro_data = "AND data_pedido >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
-
-    elif periodo == "mes":
-        filtro_data = """
-            AND MONTH(data_pedido) = MONTH(CURDATE())
-            AND YEAR(data_pedido) = YEAR(CURDATE())
-        """
-
-    cursor.execute(f"""
-        SELECT COUNT(*)
-        FROM pedidos
-        WHERE status != 'Cancelado'
-        {filtro_data}
-    """)
-
-    total_pedidos = cursor.fetchone()[0]
-
-    cursor.execute(f"""
-        SELECT COALESCE(SUM(valor_total), 0)
-        FROM pedidos
-        WHERE status != 'Cancelado'
-        {filtro_data}
-    """)
-
-    total_vendas = cursor.fetchone()[0]
-
-    cursor.close()
-    banco.close()
-
-    return {
-        "total_produtos": total_produtos,
-        "total_pedidos": total_pedidos,
-        "total_clientes": total_clientes,
-        "total_vendas": float(total_vendas)
-    }
 @app.get("/api/relatorios/produtos-mais-vendidos")
 def produtos_mais_vendidos(periodo: str = "todos"):
 
@@ -908,6 +857,75 @@ def cadastrar_pagamento(
         url="/pagamentos",
         status_code=303
     )
+    
+# ==========================================
+# DADOS DO DASHBOARD / RELATÓRIOS
+# ==========================================
+
+@app.get("/api/dashboard")
+def dados_dashboard(periodo: str = "todos"):
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+        # Total de produtos
+        cursor.execute("SELECT COUNT(*) FROM produtos")
+        total_produtos = cursor.fetchone()[0]
+
+        # Total de clientes
+        cursor.execute("SELECT COUNT(*) FROM clientes")
+        total_clientes = cursor.fetchone()[0]
+
+        # Filtro de período
+        filtro_data = ""
+
+        if periodo == "hoje":
+            filtro_data = """
+                AND DATE(data_pedido) = CURDATE()
+            """
+
+        elif periodo == "7dias":
+            filtro_data = """
+                AND data_pedido >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            """
+
+        elif periodo == "mes":
+            filtro_data = """
+                AND MONTH(data_pedido) = MONTH(CURDATE())
+                AND YEAR(data_pedido) = YEAR(CURDATE())
+            """
+
+        # Número de pedidos
+        cursor.execute(f"""
+            SELECT COUNT(*)
+            FROM pedidos
+            WHERE status != 'Cancelado'
+            {filtro_data}
+        """)
+
+        total_pedidos = cursor.fetchone()[0] or 0
+
+        # Total vendido
+        cursor.execute(f"""
+            SELECT COALESCE(SUM(valor_total), 0)
+            FROM pedidos
+            WHERE status != 'Cancelado'
+            {filtro_data}
+        """)
+
+        total_vendas = cursor.fetchone()[0] or 0
+
+        return {
+            "total_produtos": int(total_produtos),
+            "total_pedidos": int(total_pedidos),
+            "total_clientes": int(total_clientes),
+            "total_vendas": float(total_vendas)
+        }
+
+    finally:
+        cursor.close()
+        banco.close()
 
 # ==========================================
 # PÁGINA - NOVA INDICAÇÃO
@@ -1195,7 +1213,21 @@ def listar_pagamentos():
 # ==========================================
 
 @app.post("/excluir_pagamento/{pagamento_id}")
+def excluir_pagamento(pagamento_id: int):
+    banco = conectar_banco()
+    cursor = banco.cursor()
 
+    cursor.execute(
+        "DELETE FROM pagamentos WHERE id = %s",
+        (pagamento_id,)
+    )
+
+    banco.commit()
+
+    cursor.close()
+    banco.close()
+
+    return {"sucesso": True}
 
 # ==========================================
 # PÁGINA - EDITAR PAGAMENTO
