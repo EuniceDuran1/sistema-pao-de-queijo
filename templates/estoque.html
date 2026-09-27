@@ -651,6 +651,19 @@
             📋 Histórico de Movimentações
         </h2>
 
+        <button type="button" onclick="limparHistorico()" style="
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-bottom: 15px;
+    ">
+            🗑️ Limpar histórico
+        </button>
+
         <div style="
         overflow-x: auto;
     ">
@@ -809,6 +822,40 @@
             carregarMovimentacoes
         );
 
+    </script>
+
+    <script>
+        async function limparHistorico() {
+
+            const confirmar = confirm(
+                "Tem certeza que deseja limpar todo o histórico de movimentações?"
+            );
+
+            if (!confirmar) {
+                return;
+            }
+
+            try {
+                const resposta = await fetch("/api/estoque/movimentacoes", {
+                    method: "DELETE"
+                });
+
+                const resultado = await resposta.json();
+
+                if (!resposta.ok) {
+                    alert(resultado.erro || "Erro ao limpar histórico.");
+                    return;
+                }
+
+                alert(resultado.mensagem);
+
+                location.reload();
+
+            } catch (erro) {
+                console.error("Erro:", erro);
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
     </script>
 </body>
 

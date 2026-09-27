@@ -366,6 +366,8 @@
 
     <script>
         let graficoProdutos = null;
+        let graficoPedidos = null;
+        let graficoFinanceiro = null;
         async function carregarProdutosMaisVendidos() {
             try {
                 const periodo = document.getElementById("filtro-periodo").value;
@@ -450,11 +452,12 @@
                 );
             }
         }
-        document.addEventListener(
-            "DOMContentLoaded",
-            carregarProdutosMaisVendidos
-        );
-        let graficoPedidos = null;
+        document.addEventListener("DOMContentLoaded", function () {
+            carregarRelatorioVendas();
+            carregarProdutosMaisVendidos();
+            carregarRelatorioPedidos();
+            carregarRelatorioFinanceiro();
+        });
         async function carregarRelatorioPedidos() {
             try {
 
@@ -536,7 +539,6 @@
             }
         }
 
-        let graficoFinanceiro = null;
         async function carregarRelatorioFinanceiro() {
             try {
                 const periodo = document.getElementById("filtro-periodo").value;

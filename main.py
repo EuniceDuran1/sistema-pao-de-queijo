@@ -751,7 +751,7 @@ def relatorio_pedidos(periodo: str = "todos"):
 
         elif periodo == "7dias":
             filtro_data = """
-                AND data_pedido >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                AND data_pedido >= DATE_SUB(NOW(), INTERVAL 7 DAY)
             """
 
         elif periodo == "mes":
@@ -776,13 +776,11 @@ def relatorio_pedidos(periodo: str = "todos"):
         return dados
 
     except Exception as erro:
-
         return {
             "erro": str(erro)
         }
 
     finally:
-
         cursor.close()
         banco.close()
 # ==========================================
@@ -859,7 +857,7 @@ def cadastrar_pagamento(
     )
     
 # ==========================================
-# DADOS DO DASHBOARD / RELATÓRIOS
+# API - DASHBOARD / RELATÓRIO DE VENDAS
 # ==========================================
 
 @app.get("/api/dashboard")
@@ -869,15 +867,13 @@ def dados_dashboard(periodo: str = "todos"):
     cursor = banco.cursor()
 
     try:
-        # Total de produtos
+
         cursor.execute("SELECT COUNT(*) FROM produtos")
         total_produtos = cursor.fetchone()[0]
 
-        # Total de clientes
         cursor.execute("SELECT COUNT(*) FROM clientes")
         total_clientes = cursor.fetchone()[0]
 
-        # Filtro de período
         filtro_data = ""
 
         if periodo == "hoje":
@@ -892,8 +888,8 @@ def dados_dashboard(periodo: str = "todos"):
 
         elif periodo == "mes":
             filtro_data = """
-                AND MONTH(data_pedido) = MONTH(CURDATE())
                 AND YEAR(data_pedido) = YEAR(CURDATE())
+                AND MONTH(data_pedido) = MONTH(CURDATE())
             """
 
         # Número de pedidos
@@ -904,7 +900,7 @@ def dados_dashboard(periodo: str = "todos"):
             {filtro_data}
         """)
 
-        total_pedidos = cursor.fetchone()[0] or 0
+        total_pedidos = cursor.fetchone()[0]
 
         # Total vendido
         cursor.execute(f"""
@@ -914,19 +910,25 @@ def dados_dashboard(periodo: str = "todos"):
             {filtro_data}
         """)
 
-        total_vendas = cursor.fetchone()[0] or 0
+        total_vendas = cursor.fetchone()[0]
 
         return {
-            "total_produtos": int(total_produtos),
-            "total_pedidos": int(total_pedidos),
-            "total_clientes": int(total_clientes),
-            "total_vendas": float(total_vendas)
+            "total_produtos": total_produtos,
+            "total_pedidos": total_pedidos,
+            "total_clientes": total_clientes,
+            "total_vendas": float(total_vendas or 0)
+        }
+
+    except Exception as erro:
+
+        return {
+            "erro": str(erro)
         }
 
     finally:
+
         cursor.close()
         banco.close()
-
 # ==========================================
 # PÁGINA - NOVA INDICAÇÃO
 # ==========================================
@@ -2593,12 +2595,18 @@ async def saida_estoque(request: Request):
     quantidade = dados.get("quantidade")
     motivo = dados.get("motivo")
 
+    # Validação dos campos
     if not produto_id or not quantidade:
         return {
             "erro": "Produto e quantidade são obrigatórios"
         }
 
-    quantidade = int(quantidade)
+    try:
+        quantidade = int(quantidade)
+    except (ValueError, TypeError):
+        return {
+            "erro": "A quantidade deve ser um número válido"
+        }
 
     if quantidade <= 0:
         return {
@@ -2608,65 +2616,83 @@ async def saida_estoque(request: Request):
     banco = conectar_banco()
     cursor = banco.cursor(dictionary=True)
 
-    cursor.execute(
-        """
-        SELECT estoque
-        FROM produtos
-        WHERE id = %s
-        """,
-        (produto_id,)
-    )
+    try:
 
-    produto = cursor.fetchone()
+        # Busca o produto
+        cursor.execute(
+            """
+            SELECT id, nome, estoque
+            FROM produtos
+            WHERE id = %s
+            """,
+            (produto_id,)
+        )
 
-    if not produto:
+        produto = cursor.fetchone()
+
+        if not produto:
+            return {
+                "erro": "Produto não encontrado"
+            }
+
+        estoque_atual = produto["estoque"] or 0
+
+        # Verifica se existe estoque suficiente
+        if quantidade > estoque_atual:
+            return {
+                "erro": "Quantidade solicitada maior que o estoque disponível"
+            }
+
+        # Calcula o novo estoque
+        novo_estoque = estoque_atual - quantidade
+
+        # Atualiza o estoque
+        cursor.execute(
+            """
+            UPDATE produtos
+            SET estoque = %s
+            WHERE id = %s
+            """,
+            (novo_estoque, produto_id)
+        )
+
+        # Registra a movimentação
+        cursor.execute(
+            """
+            INSERT INTO movimentacoes_estoque
+            (produto_id, tipo, quantidade, observacao)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                produto_id,
+                "Saída",
+                quantidade,
+                motivo or "-"
+            )
+        )
+
+        banco.commit()
+
+        return {
+            "mensagem": "Saída registrada com sucesso",
+            "estoque_anterior": estoque_atual,
+            "estoque_atual": novo_estoque
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": f"Erro ao registrar saída: {str(erro)}"
+        }
+
+    finally:
+
         cursor.close()
         banco.close()
 
-        return {
-            "erro": "Produto não encontrado"
-        }
-
-    estoque_atual = produto["estoque"] or 0
-
-    if quantidade > estoque_atual:
-        cursor.close()
-        banco.close()
-
-        return {
-            "erro": "Quantidade solicitada maior que o estoque disponível"
-        }
-
-    novo_estoque = estoque_atual - quantidade
-
-    cursor.execute(
-        """
-        UPDATE produtos
-        SET estoque = %s
-        WHERE id = %s
-        """,
-        (novo_estoque, produto_id)
-    )
-
-    cursor.execute(
-    """
-    INSERT INTO movimentacoes_estoque
-    (produto_id, tipo, quantidade, observacao)
-    VALUES (%s, %s, %s, %s)
-    """,
-    (produto_id, "Saída", quantidade, motivo)
-)
-    banco.commit()
-
-    cursor.close()
-    banco.close()
-
-    return {
-        "mensagem": "Saída registrada com sucesso",
-        "estoque_atual": novo_estoque
-    }
-
-
+        
 # ==========================================
 # API - HISTÓRICO DO ESTOQUE
 # ==========================================
@@ -2706,6 +2732,38 @@ def listar_movimentacoes():
             )
 
     return movimentacoes
+
+@app.delete("/api/estoque/movimentacoes")
+def limpar_movimentacoes():
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+        cursor.execute("""
+            DELETE FROM movimentacoes_estoque
+        """)
+
+        banco.commit()
+
+        return {
+            "mensagem": "Histórico de movimentações limpo com sucesso"
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": f"Erro ao limpar histórico: {str(erro)}"
+        }
+
+    finally:
+        cursor.close()
+        banco.close()
+
+        
+
 # ==========================================
 # API - EXCLUIR SAÍDA FINANCEIRA
 # ==========================================
