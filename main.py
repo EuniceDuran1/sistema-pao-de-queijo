@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
-from fastapi.responses import FileResponse, RedirectResponse
+
 from fastapi.staticfiles import StaticFiles
 import mysql.connector
 from fastapi.templating import Jinja2Templates
@@ -284,7 +286,7 @@ criar_tabela_movimentacoes_estoque()
 criar_tabela_colaboradores()
 criar_tabela_indicacoes()
 criar_tabela_pagamentos()
-# ==========================================
+# =========================================
 # PÁGINA INICIAL
 # ==========================================
 
@@ -1635,7 +1637,6 @@ async def criar_pedido(request: Request):
         valor_total = 0
 
         for item in itens:
-
             produto_id = int(item["produto_id"])
             quantidade = int(item["quantidade"])
 
@@ -1659,12 +1660,13 @@ async def criar_pedido(request: Request):
             estoque = produto[1] or 0
 
             if quantidade > estoque:
-                raise Exception(
+                 raise Exception(
                     f"Estoque insuficiente para o produto {produto_id}."
                 )
 
             valor_total += preco * quantidade
 
+            
         # ------------------------------------------
         # CADASTRAR PEDIDO
         # ------------------------------------------
@@ -1690,6 +1692,8 @@ async def criar_pedido(request: Request):
         ))
 
         pedido_id = cursor.lastrowid
+
+        
 
         # ------------------------------------------
         # CADASTRAR ITENS E BAIXAR ESTOQUE
@@ -1736,7 +1740,7 @@ async def criar_pedido(request: Request):
             # Baixar estoque
             cursor.execute("""
                 UPDATE produtos
-               SET estoque = estoque - %s
+                SET estoque = estoque - %s
                 WHERE id = %s
             """, (
                 quantidade,
@@ -1765,278 +1769,13 @@ async def criar_pedido(request: Request):
                 f"Pedido #{pedido_id}"
             ))
 
-        # ------------------------------------------
-        # CONFIRMAR TRANSAÇÃO
-        # ------------------------------------------
-
         banco.commit()
 
         return {
-            "mensagem": "Pedido criado com sucesso.",
+            "mensagem": f"Pedido #{pedido_id} criado com sucesso.",
             "pedido_id": pedido_id,
-            "valor_total": valor_total,
-            "status": "Recebido"
-        }
-
-    except Exception as erro:
-
-        banco.rollback()
-
-        return {
-            "erro": str(erro)
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-# ==========================================
-# PÁGINA - FINANCEIRO
-# ==========================================
-
-@app.get("/financeiro")
-def pagina_financeiro():
-    return FileResponse("templates/financeiro.html")
-
-@app.get("/relatorios")
-def pagina_relatorios():
-    return FileResponse("templates/relatorios.html")
-
-
-@app.get("/nova_saida")
-def pagina_nova_saida():
-    return FileResponse("templates/nova_saida.html")
-# ==========================================
-# API - FINANCEIRO
-# ==========================================
-
-
-@app.get("/api/financeiro")
-def dados_financeiro(periodo: str = "todos"):
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    try:
-
-        filtro_pedidos = ""
-        filtro_movimentacoes = ""
-
-        if periodo == "hoje":
-            filtro_pedidos = """
-                AND DATE(data_pedido) = CURDATE()
-            """
-            filtro_movimentacoes = """
-                AND DATE(data_movimentacao) = CURDATE()
-            """
-
-        elif periodo == "7dias":
-            filtro_pedidos = """
-                AND data_pedido >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-            """
-            filtro_movimentacoes = """
-                AND data_movimentacao >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-            """
-
-        elif periodo == "mes":
-            filtro_pedidos = """
-                AND YEAR(data_pedido) = YEAR(CURDATE())
-                AND MONTH(data_pedido) = MONTH(CURDATE())
-            """
-            filtro_movimentacoes = """
-                AND YEAR(data_movimentacao) = YEAR(CURDATE())
-                AND MONTH(data_movimentacao) = MONTH(CURDATE())
-            """
-
-        # ==========================================
-        # TOTAL DE VENDAS
-        # ==========================================
-
-        cursor.execute(f"""
-            SELECT COALESCE(SUM(valor_total), 0) AS total_vendas
-            FROM pedidos
-            WHERE status != 'Cancelado'
-            {filtro_pedidos}
-        """)
-
-        resultado = cursor.fetchone()
-        total_vendas = float(resultado["total_vendas"] or 0)
-
-# ==        # ==========================================
-        # TOTAL DE SAÍDAS
-        # ==========================================
-
-        cursor.execute(f"""
-            SELECT COALESCE(SUM(valor), 0) AS total_saidas
-            FROM movimentacoes_financeiras
-            WHERE tipo = 'Saída'
-            {filtro_movimentacoes}
-        """)
-
-        resultado = cursor.fetchone()
-        total_saidas_financeiras = float(resultado["total_saidas"] or 0)
-
-
-        # ==========================================
-        # TOTAL DE PAGAMENTOS A COLABORADORES
-        # ==========================================
-
-        filtro_pagamentos = ""
-
-        if periodo == "hoje":
-            filtro_pagamentos = """
-                AND DATE(data_pagamento) = CURDATE()
-            """
-
-        elif periodo == "7dias":
-            filtro_pagamentos = """
-                AND data_pagamento >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-            """
-
-        elif periodo == "mes":
-            filtro_pagamentos = """
-                AND YEAR(data_pagamento) = YEAR(CURDATE())
-                AND MONTH(data_pagamento) = MONTH(CURDATE())
-            """
-
-        cursor.execute(f"""
-            SELECT COALESCE(SUM(valor), 0) AS total_pagamentos
-            FROM pagamentos
-            WHERE 1=1
-            {filtro_pagamentos}
-        """)
-
-        resultado = cursor.fetchone()
-        total_pagamentos = float(resultado["total_pagamentos"] or 0)
-
-        # ==========================================
-        # TOTAL DE SAÍDAS
-        # ==========================================
-
-        total_saidas = total_saidas_financeiras + total_pagamentos       
-        # ==========================================
-        # TOTAL DE ENTRADAS
-        # ==========================================
-
-        total_entradas = total_vendas
-
-        # ==========================================
-        # SALDO
-        # ==========================================
-
-        saldo = total_entradas - total_saidas
-
-        # ==========================================
-        # MOVIMENTAÇÕES - PEDIDOS
-        # ==========================================
-
-        cursor.execute(f"""
-            SELECT
-                id,
-                CONCAT('Pedido #', id) AS descricao,
-                'Entrada' AS tipo,
-                valor_total AS valor,
-                data_pedido AS data
-            FROM pedidos
-            WHERE status != 'Cancelado'
-            {filtro_pedidos}
-        """)
-
-        movimentacoes_pedidos = cursor.fetchall()
-
-        # ==========================================
-        # MOVIMENTAÇÕES - FINANCEIRAS
-        # ==========================================
-
-        cursor.execute(f"""
-            SELECT
-                id,
-                descricao,
-                tipo,
-                valor,
-                data_movimentacao AS data
-            FROM movimentacoes_financeiras
-            WHERE 1=1
-            {filtro_movimentacoes}
-        """)
-
-        movimentacoes_financeiras = cursor.fetchall()
-
-        # ==========================================
-        # JUNTAR MOVIMENTAÇÕES
-        # ==========================================
-
-        movimentacoes = movimentacoes_pedidos + movimentacoes_financeiras
-
-        # Converter valores para número
-        for movimento in movimentacoes:
-
-            if movimento["valor"] is not None:
-                movimento["valor"] = float(movimento["valor"])
-
-            if movimento["data"] is not None:
-                movimento["data"] = movimento["data"].isoformat()
-
-        # Ordenar da mais recente para a mais antiga
-        movimentacoes.sort(
-            key=lambda x: x["data"] or "",
-            reverse=True
-        )
-
-        return {
-            "total_vendas": total_vendas,
-            "total_entradas": total_entradas,
-            "total_saidas": total_saidas,
-            "saldo": saldo,
-            "movimentacoes": movimentacoes
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-
-# ==========================================
-# API - REGISTRAR SAÍDA FINANCEIRA
-# ==========================================
-
-# ==========================================
-# API - REGISTRAR SAÍDA FINANCEIRA
-# ==========================================
-
-@app.post("/api/financeiro/saida")
-
-async def registrar_saida(request: Request):
-
-    dados = await request.json()
-    descricao = dados.get("descricao")
-    valor = dados.get("valor")
-
-    if not descricao:
-        return {"erro": "A descrição é obrigatória."}
-
-    if valor is None or float(valor) <= 0:
-        return {"erro": "O valor deve ser maior que zero."}
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    try:
-
-        cursor.execute("""
-            INSERT INTO movimentacoes_financeiras
-            (descricao, tipo, valor)
-            VALUES (%s, %s, %s)
-        """, (
-            descricao,
-            "Saída",
-            float(valor)
-        ))
-
-        banco.commit()
-
-        return {
-            "mensagem": "Saída registrada com sucesso!"
+            "status": "Recebido",
+            "valor_total": valor_total
         }
 
     except Exception as erro:
@@ -2052,55 +1791,9 @@ async def registrar_saida(request: Request):
         cursor.close()
         banco.close()
 
-# ==========================================
-# API - REGISTRAR SAÍDA FINANCEIRA
-# ==========================================
-
-@app.post("/api/financeiro/saida")
-async def registrar_saida(request: Request):
-
-    dados = await request.json()
-
-    descricao = dados.get("descricao")
-    valor = dados.get("valor")
-
-    if not descricao:
-        return {"erro": "A descrição é obrigatória."}
-
-    if valor is None or float(valor) <= 0:
-        return {"erro": "O valor deve ser maior que zero."}
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    try:
-        cursor.execute("""
-            INSERT INTO movimentacoes_financeiras
-            (descricao, tipo, valor)
-            VALUES (%s, %s, %s)
-        """, (descricao, "Saída", valor))
-
-        banco.commit()
-
-        return {
-            "mensagem": "Saída registrada com sucesso!"
-        }
-
-    except Exception as erro:
-        banco.rollback()
-        return {
-            "erro": str(erro)
-        }
-
-    finally:
-        cursor.close()
-        banco.close()
-
-
-
-# ==========================================
-# API - DETALHES DE UM PEDIDO
-# ==========================================
+        # ==========================================
+        # API - DETALHES DO PEDIDO
+        # ==========================================
 
 @app.get("/api/pedidos/{pedido_id}")
 def detalhes_pedido(pedido_id: int):
@@ -2109,100 +1802,71 @@ def detalhes_pedido(pedido_id: int):
     cursor = banco.cursor(dictionary=True)
 
     try:
+
+        # ------------------------------------------
+        # BUSCAR DADOS DO PEDIDO
+        # ------------------------------------------
+
         cursor.execute("""
             SELECT
-                i.id,
-                i.pedido_id,
-                i.produto_id,
-                p.nome AS produto,
-                i.quantidade,
-                i.preco_unitario,
-                (i.quantidade * i.preco_unitario) AS subtotal
-            FROM itens_pedido i
-            INNER JOIN produtos p
-                ON p.id = i.produto_id
-            WHERE i.pedido_id = %s
-            ORDER BY i.id
-        """, (pedido_id,))
-
-        itens = cursor.fetchall()
-
-        for item in itens:
-            item["preco_unitario"] = float(item["preco_unitario"])
-            item["subtotal"] = float(item["subtotal"])
-
-        return itens
-
-    finally:
-        cursor.close()
-        banco.close()
-@app.get("/imprimir_pedido/{pedido_id}")
-def imprimir_pedido(pedido_id: int, request: Request):
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    try:
-        # Buscar dados do pedido e do cliente
-        cursor.execute("""
-            SELECT
-                pedidos.id,
-                pedidos.data_pedido,
-                pedidos.valor_total,
-                clientes.nome AS cliente_nome
-            FROM pedidos
-            INNER JOIN clientes
-                ON clientes.id = pedidos.cliente_id
-            WHERE pedidos.id = %s
+                p.id,
+                p.cliente_id,
+                c.nome AS cliente_nome,
+                c.telefone,
+                c.endereco,
+                p.data_pedido,
+                p.valor_total,
+                p.status
+            FROM pedidos p
+            LEFT JOIN clientes c
+                ON c.id = p.cliente_id
+            WHERE p.id = %s
         """, (pedido_id,))
 
         pedido = cursor.fetchone()
 
-        if pedido is None:
-            return RedirectResponse(
-                url="/pedidos",
-                status_code=303
-            )
+        if not pedido:
+            return {
+                "erro": "Pedido não encontrado."
+            }
 
-        # Buscar itens do pedido
+# ------------------------------------------
+# BUSCAR ITENS DO PEDIDO
+# ------------------------------------------
+
         cursor.execute("""
             SELECT
-                i.quantidade,
-                p.nome AS produto_nome,
-                i.preco_unitario,
-                (i.quantidade * i.preco_unitario) AS subtotal
-            FROM itens_pedido i
-            INNER JOIN produtos p
-                ON p.id = i.produto_id
-            WHERE i.pedido_id = %s
-            ORDER BY i.id
+                ip.produto_id,
+                pr.nome AS produto_nome,
+                ip.quantidade,
+                ip.preco_unitario,
+                (ip.quantidade * ip.preco_unitario) AS subtotal
+            FROM itens_pedido ip
+            LEFT JOIN produtos pr
+                ON pr.id = ip.produto_id
+            WHERE ip.pedido_id = %s
         """, (pedido_id,))
 
         itens = cursor.fetchall()
 
-        for item in itens:
-            item["preco_unitario"] = float(item["preco_unitario"])
-            item["subtotal"] = float(item["subtotal"])
+        # ------------------------------------------
+        # RETORNAR PEDIDO + ITENS
+        # ------------------------------------------
 
-        pedido["valor_total"] = float(pedido["valor_total"])
+        pedido["itens"] = itens
 
-        return templates.TemplateResponse(
-            request=request,
-            name="imprimir_pedido.html",
-            context={
-                "request": request,
-                "pedido": pedido,
-                "itens": itens
-            }
-        )
+        return pedido
+
+    except Exception as erro:
+
+        return {
+            "erro": str(erro)
+        }
 
     finally:
+
         cursor.close()
         banco.close()
-# ==========================================
-# API - ALTERAR STATUS DO PEDIDO
-# ==========================================
-
 # ==========================================
 # API - ALTERAR STATUS DO PEDIDO
 # ==========================================
@@ -2213,7 +1877,7 @@ async def alterar_status_pedido(pedido_id: int, request: Request):
     dados = await request.json()
     novo_status = dados.get("status")
 
-    status_permitidos = [
+    status_validos = [
         "Recebido",
         "Em preparo",
         "Pronto",
@@ -2221,74 +1885,65 @@ async def alterar_status_pedido(pedido_id: int, request: Request):
         "Cancelado"
     ]
 
-    if novo_status not in status_permitidos:
+    if novo_status not in status_validos:
         return {
-            "erro": "Status inválido"
+            "erro": "Status inválido."
         }
 
     banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
+    cursor = banco.cursor()
 
     try:
 
         # ------------------------------------------
-        # VERIFICAR STATUS ATUAL
+        # BUSCAR PEDIDO
         # ------------------------------------------
 
-        cursor.execute(
-            """
-            SELECT status
+        cursor.execute("""
+            SELECT id, status
             FROM pedidos
             WHERE id = %s
-            """,
-            (pedido_id,)
-        )
+        """, (pedido_id,))
 
         pedido = cursor.fetchone()
 
         if not pedido:
-            return {
-                "erro": "Pedido não encontrado."
-            }
+            raise Exception("Pedido não encontrado.")
 
-        status_atual = pedido["status"]
+        status_anterior = pedido[1]
 
         # ------------------------------------------
         # CANCELAR PEDIDO
         # DEVOLVER PRODUTOS AO ESTOQUE
         # ------------------------------------------
 
-        if novo_status == "Cancelado" and status_atual != "Cancelado":
+        if novo_status == "Cancelado" and status_anterior != "Cancelado":
 
-            cursor.execute(
-                """
-                SELECT
-                    produto_id,
-                    quantidade
+            cursor.execute("""
+                SELECT produto_id, quantidade
                 FROM itens_pedido
                 WHERE pedido_id = %s
-                """,
-                (pedido_id,)
-            )
+            """, (pedido_id,))
 
             itens = cursor.fetchall()
 
             for item in itens:
 
-                produto_id = item["produto_id"]
-                quantidade = item["quantidade"]
+                produto_id = item[0]
+                quantidade = item[1]
 
-                cursor.execute(
-    """
-    UPDATE produtos
-    SET estoque = estoque + %s
-    WHERE id = %s
-    """,
-    (quantidade, produto_id)
-)
+                # Devolver quantidade ao estoque
+                cursor.execute("""
+                    UPDATE produtos
+                    SET estoque = estoque + %s
+                    WHERE id = %s
+                """, (
+                    quantidade,
+                    produto_id
+                ))
 
-                cursor.execute(
-                    """
+                # Registrar movimentação
+                cursor.execute("""
                     INSERT INTO movimentacoes_estoque
                     (
                         produto_id,
@@ -2303,50 +1958,66 @@ async def alterar_status_pedido(pedido_id: int, request: Request):
                         %s,
                         %s
                     )
-                    """,
-                    (
-                        produto_id,
-                        quantidade,
-                        f"Cancelamento do Pedido #{pedido_id}"
-                    )
-                )
+                """, (
+                    produto_id,
+                    quantidade,
+                    f"Cancelamento do Pedido #{pedido_id}"
+                ))
 
         # ------------------------------------------
-        # SE SAIR DE CANCELADO PARA OUTRO STATUS
+        # REATIVAR PEDIDO
         # RETIRAR NOVAMENTE DO ESTOQUE
         # ------------------------------------------
 
-        elif status_atual == "Cancelado" and novo_status != "Cancelado":
+        elif status_anterior == "Cancelado" and novo_status != "Cancelado":
 
-            cursor.execute(
-                """
-                SELECT
-                    produto_id,
-                    quantidade
+            cursor.execute("""
+                SELECT produto_id, quantidade
                 FROM itens_pedido
                 WHERE pedido_id = %s
-                """,
-                (pedido_id,)
-            )
+            """, (pedido_id,))
 
             itens = cursor.fetchall()
 
             for item in itens:
 
-                produto_id = item["produto_id"]
-                quantidade = item["quantidade"]
+                produto_id = item[0]
+                quantidade = item[1]
 
-                cursor.execute(
-                    """
+                # Verificar estoque
+                cursor.execute("""
+                    SELECT estoque
+                    FROM produtos
+                    WHERE id = %s
+                """, (produto_id,))
+
+                produto = cursor.fetchone()
+
+                if not produto:
+                    raise Exception(
+                        f"Produto {produto_id} não encontrado."
+                    )
+
+                estoque = produto[0] or 0
+
+                if quantidade > estoque:
+                    raise Exception(
+                        f"Estoque insuficiente para reativar "
+                        f"o produto {produto_id}."
+                    )
+
+                # Retirar novamente do estoque
+                cursor.execute("""
                     UPDATE produtos
                     SET estoque = estoque - %s
                     WHERE id = %s
-                    """,
-                    (quantidade, produto_id)
-                )
+                """, (
+                    quantidade,
+                    produto_id
+                ))
 
-                cursor.execute(
-                    """
+                # Registrar movimentação
+                cursor.execute("""
                     INSERT INTO movimentacoes_estoque
                     (
                         produto_id,
@@ -2361,32 +2032,32 @@ async def alterar_status_pedido(pedido_id: int, request: Request):
                         %s,
                         %s
                     )
-                    """,
-                    (
-                        produto_id,
-                        quantidade,
-f"Reativação do Pedido #{pedido_id}"                    )
-                )
+                """, (
+                    produto_id,
+                    quantidade,
+                    f"Reativação do Pedido #{pedido_id}"
+                ))
 
         # ------------------------------------------
         # ATUALIZAR STATUS DO PEDIDO
         # ------------------------------------------
 
-        cursor.execute(
-            """
+        cursor.execute("""
             UPDATE pedidos
             SET status = %s
             WHERE id = %s
-            """,
-            (novo_status, pedido_id)
-        )
+        """, (
+            novo_status,
+            pedido_id
+        ))
 
         banco.commit()
 
         return {
-            "mensagem": f"Pedido #{pedido_id} atualizado para '{novo_status}'.",
+            "mensagem": "Status atualizado com sucesso!",
             "pedido_id": pedido_id,
-            "status": novo_status
+            "status_anterior": status_anterior,
+            "novo_status": novo_status
         }
 
     except Exception as erro:
@@ -2401,28 +2072,6 @@ f"Reativação do Pedido #{pedido_id}"                    )
 
         cursor.close()
         banco.close()
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    cursor.execute(
-        """
-        UPDATE pedidos
-        SET status = %s
-        WHERE id = %s
-        """,
-        (novo_status, pedido_id)
-    )
-
-    banco.commit()
-
-    cursor.close()
-    banco.close()
-
-    return {
-        "mensagem": "Status atualizado com sucesso",
-        "pedido_id": pedido_id,
-        "status": novo_status
-    }
 
 
 # ==========================================
@@ -2433,15 +2082,195 @@ f"Reativação do Pedido #{pedido_id}"                    )
 def pagina_pedidos():
     return FileResponse("templates/pedidos.html")
 
+# ============================================================
+# PÁGINA - RELATÓRIOS
+# ============================================================
+
+@app.get("/relatorios")
+def pagina_relatorios():
+    return FileResponse("templates/relatorios.html")
+
 
 # ==========================================
+# API - FINANCEIRO
+# ==========================================
+
+# ==========================================
+# API - FINANCEIRO
+# ==========================================
+
+@app.get("/api/financeiro")
+def listar_financeiro():
+
+    banco = conectar_banco()
+    cursor = banco.cursor(dictionary=True)
+
+    try:
+
+        # TOTAL DE VENDAS
+        cursor.execute("""
+            SELECT COALESCE(SUM(valor_total), 0) AS total
+            FROM pedidos
+        """)
+
+        resultado_vendas = cursor.fetchone()
+        total_vendas = float(resultado_vendas["total"] or 0)
+
+        # TOTAL DE SAÍDAS FINANCEIRAS
+        cursor.execute("""
+            SELECT COALESCE(SUM(valor), 0) AS total
+            FROM movimentacoes_financeiras
+            WHERE tipo = 'Saída'
+        """)
+
+        resultado_saidas = cursor.fetchone()
+        total_saidas = float(resultado_saidas["total"] or 0)
+
+        # ENTRADAS = VENDAS
+        total_entradas = total_vendas
+
+        # SALDO
+        saldo = total_entradas - total_saidas
+
+        # LISTAR MOVIMENTAÇÕES FINANCEIRAS
+        cursor.execute("""
+            SELECT
+                id,
+                descricao,
+                tipo,
+                valor,
+                data_movimentacao AS data
+            FROM movimentacoes_financeiras
+            ORDER BY id DESC
+        """)
+
+        movimentacoes = cursor.fetchall()
+
+        for movimento in movimentacoes:
+
+            if movimento["valor"] is not None:
+                movimento["valor"] = float(movimento["valor"])
+
+            if movimento["data"] is not None:
+                movimento["data"] = movimento["data"].isoformat()
+
+        return {
+            "total_vendas": total_vendas,
+            "total_entradas": total_entradas,
+            "total_saidas": total_saidas,
+            "saldo": saldo,
+            "movimentacoes": movimentacoes
+        }
+
+    finally:
+        cursor.close()
+        banco.close()
+
+
+# ==========================================
+# PÁGINA - FINANCEIRO
+# ==========================================
+
+@app.get("/financeiro")
+def pagina_financeiro():
+    return FileResponse("templates/financeiro.html")
+
+
+# ==========================================
+# PÁGINA - NOVA SAÍDA
+# ==========================================
+
+@app.get("/nova_saida")
+def pagina_nova_saida():
+    return FileResponse("templates/nova_saida.html")
+
+
+# ==========================================
+# API - REGISTRAR SAÍDA FINANCEIRA
+# ==========================================
+
+@app.post("/api/financeiro/saida")
+async def registrar_saida(request: Request):
+
+    dados = await request.json()
+
+    descricao = dados.get("descricao")
+    valor = dados.get("valor")
+    observacao = dados.get("observacao")
+
+    if not descricao:
+        return {
+            "erro": "A descrição é obrigatória."
+        }
+
+    if not valor:
+        return {
+            "erro": "O valor é obrigatório."
+        }
+
+    try:
+        valor = float(str(valor).replace(",", "."))
+    except (ValueError, TypeError):
+        return {
+            "erro": "Valor inválido."
+        }
+
+    if valor <= 0:
+        return {
+            "erro": "O valor deve ser maior que zero."
+        }
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        descricao_completa = descricao
+
+        if observacao:
+            descricao_completa += f" - {observacao}"
+
+        cursor.execute(
+            """
+            INSERT INTO movimentacoes_financeiras
+            (descricao, tipo, valor)
+            VALUES (%s, %s, %s)
+            """,
+            (
+                descricao_completa,
+                "Saída",
+                valor
+            )
+        )
+
+        banco.commit()
+
+        return {
+            "sucesso": True,
+            "mensagem": "Saída registrada com sucesso."
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "sucesso": False,
+            "erro": str(erro)
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
+# ==========================================s
 # PÁGINA - NOVO PEDIDO
 # ==========================================
 
 @app.get("/novo-pedido")
 def pagina_novo_pedido():
+    
     return FileResponse("templates/novo_pedido.html")
-
 
 # =========================================================
 #                    ESTOQUE
@@ -2775,6 +2604,7 @@ def excluir_saida(saida_id: int):
     cursor = banco.cursor()
 
     try:
+
         cursor.execute("""
             DELETE FROM movimentacoes_financeiras
             WHERE id = %s
@@ -2787,6 +2617,7 @@ def excluir_saida(saida_id: int):
         }
 
     except Exception as erro:
+
         banco.rollback()
 
         return {
@@ -2794,5 +2625,374 @@ def excluir_saida(saida_id: int):
         }
 
     finally:
+
+        cursor.close()
+        banco.close()
+# ==========================================
+# IMPRIMIR PEDIDO
+# ==========================================
+
+@app.get("/imprimir_pedido/{pedido_id}", response_class=HTMLResponse)
+async def imprimir_pedido(pedido_id: int):
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        # Buscar dados do pedido
+        cursor.execute("""
+            SELECT
+                p.id,
+                p.data_pedido,
+                p.valor_total,
+                p.status,
+                c.nome,
+                c.telefone,
+                c.endereco
+            FROM pedidos p
+            INNER JOIN clientes c
+                ON p.cliente_id = c.id
+            WHERE p.id = %s
+        """, (pedido_id,))
+
+        pedido = cursor.fetchone()
+
+        if not pedido:
+            return HTMLResponse(
+                "<h2>Pedido não encontrado.</h2>",
+                status_code=404
+            )
+
+        # Buscar itens do pedido
+        cursor.execute("""
+            SELECT
+                pr.nome,
+                ip.quantidade,
+                ip.preco_unitario,
+                (ip.quantidade * ip.preco_unitario) AS subtotal
+            FROM itens_pedido ip
+            INNER JOIN produtos pr
+                ON ip.produto_id = pr.id
+            WHERE ip.pedido_id = %s
+        """, (pedido_id,))
+
+        itens = cursor.fetchall()
+
+        # Dados do pedido
+        id_pedido = pedido[0]
+        data_pedido = pedido[1]
+        valor_total = float(pedido[2])
+        status = pedido[3]
+        cliente = pedido[4]
+        telefone = pedido[5]
+        endereco = pedido[6]
+
+        # Montar tabela de itens
+        itens_html = ""
+
+        for item in itens:
+
+            nome_produto = item[0]
+            quantidade = item[1]
+            preco_unitario = float(item[2])
+            subtotal = float(item[3])
+
+            itens_html += f"""
+                <tr>
+                    <td>{nome_produto}</td>
+                    <td>{quantidade}</td>
+                    <td>R$ {preco_unitario:.2f}</td>
+                    <td>R$ {subtotal:.2f}</td>
+                </tr>
+            """
+
+        # Página de impressão
+        html = f"""
+        <!DOCTYPE html>
+
+        <html lang="pt-BR">
+
+        <head>
+
+            <meta charset="UTF-8">
+
+            <title>Pedido #{id_pedido}</title>
+
+                        <style>
+                * {{
+                    box-sizing: border-box;
+                }}
+
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    color: #333;
+                    font-size: 14px;
+                }}
+
+                .cabecalho {{
+                    text-align: center;
+                    border-bottom: 2px solid #8B4A00;
+                    padding-bottom: 10px;
+                    margin-bottom: 15px;
+                }}
+
+                .cabecalho h1 {{
+                    margin: 0;
+                    color: #8B4A00;
+                    font-size: 24px;
+                }}
+
+                .cabecalho h2 {{
+                    margin: 6px 0 0;
+                    font-size: 18px;
+                }}
+
+                .informacoes {{
+                    margin-bottom: 15px;
+                }}
+
+                .informacoes p {{
+                    margin: 4px 0;
+                }}
+
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 12px;
+                }}
+
+                th {{
+                    background: #8B4A00;
+                    color: white;
+                    padding: 7px;
+                    text-align: left;
+                    font-size: 13px;
+                }}
+
+                td {{
+                    padding: 7px;
+                    border-bottom: 1px solid #ddd;
+                    font-size: 13px;
+                }}
+
+                .total {{
+                    text-align: right;
+                    margin-top: 15px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #8B4A00;
+                }}
+
+                .botao-imprimir {{
+                    margin-top: 25px;
+                    padding: 12px 25px;
+                    background: #8B4A00;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                }}
+
+                @media print {{
+    @page {{
+        size: A4 portrait;
+        margin: 8mm;
+    }}
+
+    body {{
+        margin: 0;
+        padding: 0;
+        font-size: 11px;
+        color: #222;
+    }}
+
+    .cabecalho {{
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }}
+
+    .cabecalho h1 {{
+        font-size: 20px;
+        margin: 0;
+    }}
+
+    .cabecalho h2 {{
+        font-size: 15px;
+        margin: 4px 0 0 0;
+    }}
+
+    .informacoes {{
+        margin-bottom: 10px;
+    }}
+
+    .informacoes p {{
+        margin: 3px 0;
+    }}
+
+    table {{
+        margin-top: 10px;
+    }}
+
+    th {{
+        padding: 6px;
+        font-size: 11px;
+    }}
+
+    td {{
+        padding: 6px;
+        font-size: 11px;
+    }}
+
+    .total {{
+        margin-top: 10px;
+        font-size: 15px;
+    }}
+
+    
+}}
+                    .cabecalho {{
+                        padding-bottom: 8px;
+                        margin-bottom: 12px;
+                    }}
+
+                    .cabecalho h1 {{
+                        font-size: 20px;
+                    }}
+
+                    .cabecalho h2 {{
+                        font-size: 16px;
+                    }}
+
+                    .informacoes {{
+                        margin-bottom: 10px;
+                    }}
+
+                    .informacoes p {{
+                        margin: 3px 0;
+                    }}
+
+                    table {{
+                        margin-top: 8px;
+                    }}
+
+                    th,
+                    td {{
+                        padding: 5px;
+                        font-size: 11px;
+                    }}
+
+                    .total {{
+                        margin-top: 10px;
+                        font-size: 16px;
+                    }}
+@media print {{
+    @page {{
+        size: A4 portrait;
+        margin: 10mm;
+    }}
+
+    body {{
+        margin: 0;
+        font-size: 12px;
+    }}
+
+    .botao-imprimir {{
+        display: none !important;
+    }}
+}}
+            </style>
+        </head>
+
+        <body>
+
+            <div class="cabecalho">
+
+                <h1>🥖 Sistema Pão de Queijo</h1>
+
+                <h2>Pedido #{id_pedido}</h2>
+
+            </div>
+
+            <div class="informacoes">
+
+                <p>
+                    <strong>Cliente:</strong>
+                    {cliente}
+                </p>
+
+                <p>
+                    <strong>Telefone:</strong>
+                    {telefone or "-"}
+                </p>
+
+                <p>
+                    <strong>Endereço:</strong>
+                    {endereco or "-"}
+                </p>
+
+                <p>
+                    <strong>Data do pedido:</strong>
+                    {data_pedido}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {status}
+                </p>
+
+            </div>
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Preço unitário</th>
+                        <th>Subtotal</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {itens_html}
+
+                </tbody>
+
+            </table>
+
+            <div class="total">
+
+    Total do pedido:
+
+    R$ {valor_total:.2f}
+
+</div>
+
+<button class="botao-imprimir" onclick="window.print()">
+    🖨️ Imprimir
+</button>
+
+</body>
+</html>
+"""
+        return HTMLResponse(content=html)
+
+    except Exception as erro:
+
+        print("Erro ao imprimir pedido:", erro)
+
+        return HTMLResponse(
+            f"<h2>Erro ao carregar pedido: {erro}</h2>",
+            status_code=500
+        )
+
+    finally:
+
         cursor.close()
         banco.close()

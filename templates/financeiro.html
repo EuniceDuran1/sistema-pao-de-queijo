@@ -327,7 +327,13 @@
                 const dados = await resposta.json();
 
                 function moeda(valor) {
-                    return Number(valor).toLocaleString("pt-BR", {
+                    const numero = Number(valor);
+
+                    if (!Number.isFinite(numero)) {
+                        return "R$ 0,00";
+                    }
+
+                    return numero.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL"
                     });
@@ -354,28 +360,35 @@
                     const linha = document.createElement("tr");
 
                     linha.innerHTML = `
-        <td>${movimento.id}</td>
-        <td>${movimento.descricao}</td>
-        <td>${movimento.tipo}</td>
-        <td>R$ ${movimento.valor.toFixed(2).replace(".", ",")}</td>
-        <td>${movimento.data ? new Date(movimento.data).toLocaleDateString("pt-BR") : "-"}</td>
-        <td>
-            ${movimento.tipo === "Saída"
-                            ? `<button onclick="excluirSaida(${movimento.id})"
-                    style="
-                        background: #d64545;
-                        color: white;
-                        border: none;
-                        padding: 7px 10px;
-                        border-radius: 6px;
-                        cursor: pointer;
-                    ">
-                    🗑️ Excluir
-                   </button>`
+    <td>${movimento.id}</td>
+    <td>${movimento.descricao}</td>
+    <td>${movimento.tipo}</td>
+    <td>${moeda(movimento.valor)}</td>
+    <td>
+        ${movimento.data
+                            ? new Date(movimento.data).toLocaleDateString("pt-BR")
                             : "-"
                         }
-        </td>
-    `;
+    </td>
+    <td>
+        ${movimento.tipo === "Saída"
+                            ? `
+                    <button onclick="excluirSaida(${movimento.id})"
+                        style="
+                            background: #d64545;
+                            color: white;
+                            border: none;
+                            padding: 7px 10px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                        ">
+                        🗑️ Excluir
+                    </button>
+                  `
+                            : "-"
+                        }
+    </td>
+`;
 
                     tabela.appendChild(linha);
                 });

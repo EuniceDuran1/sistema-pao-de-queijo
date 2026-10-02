@@ -485,9 +485,10 @@
                     throw new Error("Erro ao buscar detalhes do pedido.");
                 }
 
-                const itens = await resposta.json();
+                const pedido = await resposta.json();
+                const itens = pedido.itens;
 
-                if (itens.length === 0) {
+                if (!itens || itens.length === 0) {
                     alert("Este pedido não possui itens.");
                     return;
                 }
@@ -513,7 +514,7 @@
                 <div class="item-pedido">
 
                     <div>
-                        <strong>${item.produto}</strong>
+                        <strong>${item.produto_nome}</strong>
 
                         <p>
                             Quantidade: ${item.quantidade}
@@ -538,10 +539,7 @@
 
                 });
 
-                const total = itens.reduce(
-                    (soma, item) => soma + Number(item.subtotal),
-                    0
-                );
+                const total = Number(pedido.valor_total);
 
                 conteudo += `
                     </div>
