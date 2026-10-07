@@ -231,7 +231,23 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>📋 Movimentações Financeiras</h2>
 
-                    <button onclick="window.location.href='/nova_saida'" style="
+                    <div style="display: flex; gap: 10px;">
+
+                        <!-- BOTÃO NOVA ENTRADA -->
+                        <button onclick="window.location.href='/nova_entrada'" style="
+            background: #198754;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        ">
+                            ➕ Nova Entrada
+                        </button>
+
+                        <!-- BOTÃO NOVA SAÍDA -->
+                        <button onclick="window.location.href='/nova_saida'" style="
             background: #8b4a00;
             color: white;
             border: none;
@@ -240,9 +256,13 @@
             cursor: pointer;
             font-weight: bold;
         ">
-                        ➕ Nova Saída
-                    </button>
+                            ➕ Nova Saída
+                        </button>
+
+                    </div>
+
                 </div>
+
 
                 <table>
 
@@ -320,6 +340,50 @@
             }
         }
 
+        async function excluirEntrada(id) {
+
+            const confirmar = confirm(
+                "Tem certeza que deseja excluir esta entrada?"
+            );
+
+            if (!confirmar) {
+                return;
+            }
+
+            try {
+
+                const resposta = await fetch(
+                    `/api/financeiro/entrada/${id}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok && !resultado.erro) {
+
+                    alert("Entrada excluída com sucesso!");
+
+                    carregarFinanceiro();
+
+                } else {
+
+                    alert(
+                        resultado.erro || "Erro ao excluir entrada."
+                    );
+
+                }
+
+            } catch (erro) {
+
+                console.error(erro);
+
+                alert("Erro de comunicação com o servidor.");
+
+            }
+        }
+
         async function carregarFinanceiro() {
 
             try {
@@ -370,22 +434,36 @@
                             : "-"
                         }
     </td>
-    <td>
+    <td>        
         ${movimento.tipo === "Saída"
                             ? `
-                    <button onclick="excluirSaida(${movimento.id})"
-                        style="
-                            background: #d64545;
-                            color: white;
-                            border: none;
-                            padding: 7px 10px;
-                            border-radius: 6px;
-                            cursor: pointer;
-                        ">
-                        🗑️ Excluir
-                    </button>
-                  `
-                            : "-"
+        <button onclick="excluirSaida(${movimento.id})"
+            style="
+                background: #d64545;
+                color: white;
+                border: none;
+                padding: 7px 10px;
+                border-radius: 6px;
+                cursor: pointer;
+            ">
+            🗑️ Excluir
+        </button>
+    `
+                            : movimento.tipo === "Entrada"
+                                ? `
+        <button onclick="excluirEntrada(${movimento.id})"
+            style="
+                background: #d64545;
+                color: white;
+                border: none;
+                padding: 7px 10px;
+                border-radius: 6px;
+                cursor: pointer;
+            ">
+            🗑️ Excluir
+        </button>
+    `
+                                : "-"
                         }
     </td>
 `;

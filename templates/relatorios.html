@@ -216,6 +216,11 @@
                     </canvas>
                 </div>
 
+                <div style="margin-top: 40px; height: 300px;">
+                    <h3>Saídas financeiras</h3>
+                    <canvas id="grafico-saidas"></canvas>
+                </div>
+
                 <table style="
         width: 100%;
         margin-top: 20px;
@@ -579,6 +584,189 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <script>
+        async function carregarRelatorioFinanceiro() {
+            try {
+                const resposta = await fetch("/api/financeiro");
+
+                if (!resposta.ok) {
+                    throw new Error("Erro ao consultar os dados financeiros.");
+                }
+
+                const dados = await resposta.json();
+
+                document.getElementById("relatorio-entradas").textContent =
+                    `R$ ${Number(dados.total_entradas).toFixed(2).replace(".", ",")}`;
+
+                document.getElementById("relatorio-saidas").textContent =
+                    `R$ ${Number(dados.total_saidas).toFixed(2).replace(".", ",")}`;
+
+                document.getElementById("relatorio-saldo").textContent =
+                    `R$ ${Number(dados.saldo).toFixed(2).replace(".", ",")}`;
+
+                // =====================================================
+                // GRÁFICO FINANCEIRO
+                // =====================================================
+
+                const canvasFinanceiro = document.getElementById("grafico-financeiro");
+
+                if (canvasFinanceiro) {
+
+                    if (window.graficoFinanceiro) {
+                        window.graficoFinanceiro.destroy();
+                    }
+
+                    window.graficoFinanceiro = new Chart(
+                        canvasFinanceiro,
+                        {
+                            type: "bar",
+
+                            data: {
+                                labels: [
+                                    "Entradas",
+                                    "Saídas"
+                                ],
+
+                                datasets: [{
+                                    label: "Valor financeiro",
+
+                                    data: [
+                                        Number(dados.total_entradas),
+                                        Number(dados.total_saidas)
+                                    ]
+                                }]
+                            },
+
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+
+                                        ticks: {
+                                            callback: function (value) {
+                                                return "R$ " +
+                                                    Number(value)
+                                                        .toFixed(2)
+                                                        .replace(".", ",");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    );
+                }
+
+                // =====================================================
+                // GRÁFICO DE SAÍDAS FINANCEIRAS
+                // =====================================================
+
+                const canvasSaidas = document.getElementById("grafico-saidas");
+
+                if (canvasSaidas) {
+
+                    // Filtra somente as saídas
+                    const saidas = dados.movimentacoes.filter(
+                        movimento => movimento.tipo === "Saída"
+                    );
+
+                    // Agrupa as saídas pela descrição
+                    const valoresPorDescricao = {};
+
+                    saidas.forEach(function (movimento) {
+
+                        const descricao = movimento.descricao || "Outras";
+
+                        if (!valoresPorDescricao[descricao]) {
+                            valoresPorDescricao[descricao] = 0;
+                        }
+
+                        valoresPorDescricao[descricao] += Number(movimento.valor);
+                    });
+
+                    const labelsSaidas = Object.keys(valoresPorDescricao);
+
+                    const valoresSaidas = Object.values(valoresPorDescricao);
+
+                    // Destrói o gráfico anterior, se existir
+                    if (window.graficoSaidas) {
+                        window.graficoSaidas.destroy();
+                    }
+
+                    window.graficoSaidas = new Chart(
+                        canvasSaidas,
+                        {
+                            type: "bar",
+
+                            data: {
+                                labels: labelsSaidas,
+
+                                datasets: [{
+                                    label: "Saídas",
+                                    data: valoresSaidas
+                                }]
+                            },
+
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+
+                                                return "R$ " +
+                                                    Number(context.raw)
+                                                        .toFixed(2)
+                                                        .replace(".", ",");
+                                            }
+                                        }
+                                    }
+                                },
+
+                                scales: {
+
+                                    y: {
+                                        beginAtZero: true,
+
+                                        ticks: {
+                                            callback: function (value) {
+
+                                                return "R$ " +
+                                                    Number(value)
+                                                        .toFixed(2)
+                                                        .replace(".", ",");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    );
+                }
+
+
+            } catch (erro) {
+                console.error("Erro ao carregar relatório financeiro:", erro);
+            }
+        }
+
+        carregarRelatorioFinanceiro();
+    </script>
 </body>
 
 </html>

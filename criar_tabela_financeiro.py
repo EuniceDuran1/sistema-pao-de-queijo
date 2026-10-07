@@ -10,12 +10,24 @@ cursor.execute("""
         tipo VARCHAR(20) NOT NULL,
         valor DECIMAL(10,2) NOT NULL,
         data_movimentacao DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
+   )
 """)
 
 banco.commit()
 
+# Adicionar a coluna observacao caso ela ainda não exista
+try:
+    cursor.execute("""
+        ALTER TABLE movimentacoes_financeiras
+        ADD COLUMN observacao VARCHAR(255) NULL
+    """)
+    banco.commit()
+    print("Coluna observacao adicionada com sucesso!")
+
+except Exception as erro:
+    print("A coluna observacao já existe.")
+
 cursor.close()
 banco.close()
 
-print("Tabela movimentacoes_financeiras criada com sucesso!")
+print("Tabela movimentacoes_financeiras atualizada com sucesso!")

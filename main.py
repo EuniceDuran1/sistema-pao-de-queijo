@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, File, UploadFile
+from pydantic import BaseModel
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 import os
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -717,10 +719,10 @@ def dados_dashboard():
     total_clientes = cursor.fetchone()[0]
 
     cursor.execute("""
-        SELECT COALESCE(SUM(valor_total), 0)
-        FROM pedidos
-        WHERE status != 'Cancelado'
-    """)
+    SELECT COALESCE(SUM(valor_total), 0)
+    FROM pedidos
+    WHERE status != 'Cancelado'
+""")
     total_vendas = cursor.fetchone()[0]
 
     cursor.close()
@@ -792,6 +794,56 @@ def relatorio_pedidos(periodo: str = "todos"):
 @app.get("/produtos")
 def pagina_produtos():
     return FileResponse("templates/produtos.html")
+
+# ==========================================
+# API - LISTAR PEDIDOS
+# ==========================================
+
+@app.get("/api/pedidos")
+def listar_pedidos():
+    banco = conectar_banco()
+    cursor = banco.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT
+                p.id,
+                c.nome AS cliente,
+                p.data_pedido,
+                p.valor_total,
+                p.status
+            FROM pedidos p
+            LEFT JOIN clientes c
+                ON p.cliente_id = c.id
+            ORDER BY p.id DESC
+        """)
+
+        pedidos = cursor.fetchall()
+
+        return pedidos
+
+    except Exception as e:
+        return {"erro": str(e)}
+
+    finally:
+        cursor.close()
+        banco.close()
+# ==========================================
+# PÁGINA DE PEDIDOS
+# ==========================================
+
+@app.get("/pedidos")
+def pagina_pedidos():
+    return FileResponse("templates/pedidos.html")
+
+
+# ==========================================
+# PÁGINA DE ESTOQUE
+# ==========================================
+
+@app.get("/estoque")
+def pagina_estoque():
+    return FileResponse("templates/estoque.html")
 
 # ==========================================
 # PÁGINA - INDICAÇÕES
@@ -1331,28 +1383,105 @@ async def atualizar_pagamento(
 # ==========================================
 # PÁGINA - NOVO PRODUTO
 # ==========================================
+
 @app.get("/produtos/novo")
 def novo_produto():
     return FileResponse("templates/novo_produto.html")
+
+
 @app.post("/produtos/novo")
 async def cadastrar_produto(
     nome: str = Form(...),
     descricao: str = Form(...),
     preco: float = Form(...),
-    estoque: int = Form(...)
+    estoque: int = Form(...),
+    imagem: UploadFile = File(None)
 ):
+
     banco = conectar_banco()
     cursor = banco.cursor()
 
+    caminho_imagem = None
+
+    # ==========================================
+    # SALVAR IMAGEM
+    # ==========================================
+
+    if imagem and imagem.filename:
+
+        extensoes_permitidas = {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+        }
+
+        extensao = os.path.splitext(
+            imagem.filename
+        )[1].lower()
+
+        if extensao not in extensoes_permitidas:
+
+            cursor.close()
+            banco.close()
+
+            return RedirectResponse(
+                url="/produtos/novo",
+                status_code=303
+            )
+
+        # Garante que a pasta exista
+        os.makedirs(
+            "static/img",
+            exist_ok=True
+        )
+
+        # Nome único para a imagem
+        nome_arquivo = (
+            f"produto_{uuid.uuid4().hex}{extensao}"
+        )
+
+        caminho_arquivo = os.path.join(
+            "static/img",
+            nome_arquivo
+        )
+
+        # Salva a imagem
+        conteudo = await imagem.read()
+
+        with open(
+            caminho_arquivo,
+            "wb"
+        ) as arquivo:
+
+            arquivo.write(conteudo)
+
+        # Caminho salvo no banco
+        caminho_imagem = (
+            f"/static/img/{nome_arquivo}"
+        )
+
+    # ==========================================
+    # CADASTRAR PRODUTO
+    # ==========================================
+
     cursor.execute(
         """
-        INSERT INTO produtos (nome, descricao, preco, estoque)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO produtos
+        (nome, descricao, preco, estoque, imagem)
+        VALUES (%s, %s, %s, %s, %s)
         """,
-        (nome, descricao, preco, estoque)
+        (
+            nome,
+            descricao,
+            preco,
+            estoque,
+            caminho_imagem
+        )
     )
 
     banco.commit()
+
     cursor.close()
     banco.close()
 
@@ -1360,13 +1489,87 @@ async def cadastrar_produto(
         url="/produtos",
         status_code=303
     )
+
+
 # ==========================================
 # PÁGINA - EDITAR PRODUTO
 # ==========================================
 
 @app.get("/produtos/editar/{produto_id}")
 def editar_produto(produto_id: int):
-    return FileResponse("templates/editar_produto.html")
+    return FileResponse(
+        "templates/editar_produto.html"
+    )
+
+# ==========================================
+# API - EDITAR PRODUTO
+# ==========================================
+
+@app.put("/api/produtos/{produto_id}")
+async def atualizar_produto(
+    produto_id: int,
+    request: Request
+):
+
+    dados = await request.json()
+
+    nome = dados.get("nome")
+    descricao = dados.get("descricao")
+    preco = dados.get("preco")
+    estoque = dados.get("estoque")
+
+    if not nome or preco is None or estoque is None:
+        return {
+            "erro": "Nome, preço e estoque são obrigatórios"
+        }
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            UPDATE produtos
+            SET
+                nome = %s,
+                descricao = %s,
+                preco = %s,
+                estoque = %s
+            WHERE id = %s
+            """,
+            (
+                nome,
+                descricao,
+                preco,
+                estoque,
+                produto_id
+            )
+        )
+
+        banco.commit()
+
+        if cursor.rowcount == 0:
+            return {
+                "erro": "Produto não encontrado"
+            }
+
+        return {
+            "mensagem": "Produto atualizado com sucesso"
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": str(erro)
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
 
 # ==========================================
 # API - LISTAR TODOS OS PRODUTOS
@@ -1376,6 +1579,7 @@ def editar_produto(produto_id: int):
 def listar_produtos():
 
     banco = conectar_banco()
+
     cursor = banco.cursor(dictionary=True)
 
     cursor.execute("""
@@ -1384,933 +1588,13 @@ def listar_produtos():
             nome,
             descricao,
             preco,
-            estoque
+            estoque,
+            imagem
         FROM produtos
         ORDER BY nome
     """)
 
     produtos = cursor.fetchall()
-
-    cursor.close()
-    banco.close()
-
-    return produtos
-# ==========================================
-# API - LISTAR TODOS OS PRODUTOS
-# ==========================================
-
-# ==========================================
-# API - ATUALIZAR PRODUTO
-# ==========================================
-# ==========================================
-# API - BUSCAR UM PRODUTO PELO ID
-# ==========================================
-
-@app.get("/api/produtos/{produto_id}")
-def buscar_produto(produto_id: int):
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    cursor.execute("""
-        SELECT
-            id,
-            nome,
-            descricao,
-            preco,
-            estoque
-        FROM produtos
-        WHERE id = %s
-    """, (produto_id,))
-
-    produto = cursor.fetchone()
-
-    cursor.close()
-    banco.close()
-
-    if not produto:
-        return {"erro": "Produto não encontrado"}
-
-    return produto
-
-
-# ==========================================
-# API - ATUALIZAR PRODUTO
-# ==========================================
-# ==========================================
-# API - BUSCAR UM PRODUTO PELO ID
-# ==========================================
-
-@app.get("/api/produtos/{produto_id}")
-def buscar_produto(produto_id: int):
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    cursor.execute("""
-        SELECT
-            id,
-            nome,
-            descricao,
-            preco,
-            estoque
-        FROM produtos
-        WHERE id = %s
-    """, (produto_id,))
-
-    produto = cursor.fetchone()
-
-    cursor.close()
-    banco.close()
-
-    if not produto:
-        return {"erro": "Produto não encontrado"}
-
-    return produto
-
-
-# ==========================================
-# API - ATUALIZAR PRODUTO
-# ==========================================
-
-@app.put("/api/produtos/{produto_id}")
-async def atualizar_produto(produto_id: int, request: Request):
-    dados = await request.json()
-
-    nome = dados.get("nome")
-    descricao = dados.get("descricao")
-    preco = dados.get("preco")
-    estoque = dados.get("estoque")
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    cursor.execute(
-        """
-        UPDATE produtos
-        SET nome = %s,
-            descricao = %s,
-            preco = %s,
-            estoque = %s
-        WHERE id = %s
-        """,
-        (nome, descricao, preco, estoque, produto_id)
-    )
-
-    banco.commit()
-
-    cursor.close()
-    banco.close()
-
-    return {
-        "mensagem": "Produto atualizado com sucesso!"
-    }
-        
-# ============================================
-# API - EXCLUIR PRODUTO
-# ============================================
-
-@app.delete("/api/produtos/{produto_id}")
-def excluir_produto(produto_id: int):
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    try:
-
-        cursor.execute(
-            "DELETE FROM produtos WHERE id = %s",
-            (produto_id,)
-        )
-
-        banco.commit()
-
-        return {
-            "mensagem": "Produto excluído com sucesso!"
-        }
-
-    except mysql.connector.Error as erro:
-
-        banco.rollback()
-
-        if erro.errno == 1451:
-
-            return {
-                "erro": "Este produto não pode ser excluído porque está vinculado a um ou mais pedidos. O histórico de vendas será preservado."
-            }
-
-        return {
-            "erro": "Não foi possível excluir o produto."
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-      
-# ==========================================
-# PÁGINA - NOVO PRODUTO
-
-# ==========================================
-
-# ==========================================
-# API - CRIAR NOVO PEDIDO
-# ==========================================
-# ==========================================
-# API - LISTAR PEDIDOS
-# ==========================================
-
-@app.get("/api/pedidos")
-def listar_pedidos():
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    try:
-
-        cursor.execute("""
-            SELECT
-                p.id,
-                c.nome AS cliente,
-                p.data_pedido,
-                p.valor_total,
-                p.status
-            FROM pedidos p
-            INNER JOIN clientes c
-                ON c.id = p.cliente_id
-            ORDER BY p.id DESC
-        """)
-
-        pedidos = cursor.fetchall()
-
-        for pedido in pedidos:
-            if pedido["valor_total"] is not None:
-                pedido["valor_total"] = float(pedido["valor_total"])
-
-        return pedidos
-
-    finally:
-        cursor.close()
-        banco.close()
-@app.post("/api/pedidos")
-async def criar_pedido(request: Request):
-
-    dados = await request.json()
-
-    cliente_id = dados.get("cliente_id")
-    itens = dados.get("itens")
-
-    if not cliente_id:
-        return {
-            "erro": "Selecione um cliente."
-        }
-
-    if not itens or len(itens) == 0:
-        return {
-            "erro": "Adicione pelo menos um produto ao pedido."
-        }
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    try:
-
-        # ------------------------------------------
-        # VERIFICAR CLIENTE
-        # ------------------------------------------
-
-        cursor.execute("""
-            SELECT id
-            FROM clientes
-            WHERE id = %s
-        """, (cliente_id,))
-
-        cliente = cursor.fetchone()
-
-        if not cliente:
-            raise Exception("Cliente não encontrado.")
-
-        # ------------------------------------------
-        # CALCULAR TOTAL E VERIFICAR ESTOQUE
-        # ------------------------------------------
-
-        valor_total = 0
-
-        for item in itens:
-            produto_id = int(item["produto_id"])
-            quantidade = int(item["quantidade"])
-
-            if quantidade < 1:
-                raise Exception("Quantidade inválida.")
-
-            cursor.execute("""
-                SELECT preco, estoque
-                FROM produtos
-                WHERE id = %s
-            """, (produto_id,))
-
-            produto = cursor.fetchone()
-
-            if not produto:
-                raise Exception(
-                    f"Produto {produto_id} não encontrado."
-                )
-
-            preco = float(produto[0])
-            estoque = produto[1] or 0
-
-            if quantidade > estoque:
-                 raise Exception(
-                    f"Estoque insuficiente para o produto {produto_id}."
-                )
-
-            valor_total += preco * quantidade
-
-            
-        # ------------------------------------------
-        # CADASTRAR PEDIDO
-        # ------------------------------------------
-
-        cursor.execute("""
-            INSERT INTO pedidos
-            (
-                cliente_id,
-                data_pedido,
-                valor_total,
-                status
-            )
-            VALUES
-            (
-                %s,
-                NOW(),
-                %s,
-                'Recebido'
-            )
-        """, (
-            cliente_id,
-            valor_total
-        ))
-
-        pedido_id = cursor.lastrowid
-
-        
-
-        # ------------------------------------------
-        # CADASTRAR ITENS E BAIXAR ESTOQUE
-        # ------------------------------------------
-
-        for item in itens:
-
-            produto_id = int(item["produto_id"])
-            quantidade = int(item["quantidade"])
-
-            cursor.execute("""
-                SELECT preco
-                FROM produtos
-                WHERE id = %s
-            """, (produto_id,))
-
-            produto = cursor.fetchone()
-
-            preco = float(produto[0])
-
-            # Cadastrar item
-            cursor.execute("""
-                INSERT INTO itens_pedido
-                (
-                    pedido_id,
-                    produto_id,
-                    quantidade,
-                    preco_unitario
-                )
-                VALUES
-                (
-                    %s,
-                    %s,
-                    %s,
-                    %s
-                )
-            """, (
-                pedido_id,
-                produto_id,
-                quantidade,
-                preco
-            ))
-
-            # Baixar estoque
-            cursor.execute("""
-                UPDATE produtos
-                SET estoque = estoque - %s
-                WHERE id = %s
-            """, (
-                quantidade,
-                produto_id
-            ))
-
-            # Registrar movimentação
-            cursor.execute("""
-                INSERT INTO movimentacoes_estoque
-                (
-                    produto_id,
-                    tipo,
-                    quantidade,
-                    observacao
-                )
-                VALUES
-                (
-                    %s,
-                    'Saída',
-                    %s,
-                    %s
-                )
-            """, (
-                produto_id,
-                quantidade,
-                f"Pedido #{pedido_id}"
-            ))
-
-        banco.commit()
-
-        return {
-            "mensagem": f"Pedido #{pedido_id} criado com sucesso.",
-            "pedido_id": pedido_id,
-            "status": "Recebido",
-            "valor_total": valor_total
-        }
-
-    except Exception as erro:
-
-        banco.rollback()
-
-        return {
-            "erro": str(erro)
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-
-        # ==========================================
-        # API - DETALHES DO PEDIDO
-        # ==========================================
-
-@app.get("/api/pedidos/{pedido_id}")
-def detalhes_pedido(pedido_id: int):
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    try:
-
-        # ------------------------------------------
-        # BUSCAR DADOS DO PEDIDO
-        # ------------------------------------------
-
-        cursor.execute("""
-            SELECT
-                p.id,
-                p.cliente_id,
-                c.nome AS cliente_nome,
-                c.telefone,
-                c.endereco,
-                p.data_pedido,
-                p.valor_total,
-                p.status
-            FROM pedidos p
-            LEFT JOIN clientes c
-                ON c.id = p.cliente_id
-            WHERE p.id = %s
-        """, (pedido_id,))
-
-        pedido = cursor.fetchone()
-
-        if not pedido:
-            return {
-                "erro": "Pedido não encontrado."
-            }
-
-# ------------------------------------------
-# BUSCAR ITENS DO PEDIDO
-# ------------------------------------------
-
-        cursor.execute("""
-            SELECT
-                ip.produto_id,
-                pr.nome AS produto_nome,
-                ip.quantidade,
-                ip.preco_unitario,
-                (ip.quantidade * ip.preco_unitario) AS subtotal
-            FROM itens_pedido ip
-            LEFT JOIN produtos pr
-                ON pr.id = ip.produto_id
-            WHERE ip.pedido_id = %s
-        """, (pedido_id,))
-
-        itens = cursor.fetchall()
-
-        # ------------------------------------------
-        # RETORNAR PEDIDO + ITENS
-        # ------------------------------------------
-
-        pedido["itens"] = itens
-
-        return pedido
-
-    except Exception as erro:
-
-        return {
-            "erro": str(erro)
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-# ==========================================
-# API - ALTERAR STATUS DO PEDIDO
-# ==========================================
-
-@app.put("/api/pedidos/{pedido_id}/status")
-async def alterar_status_pedido(pedido_id: int, request: Request):
-
-    dados = await request.json()
-    novo_status = dados.get("status")
-
-    status_validos = [
-        "Recebido",
-        "Em preparo",
-        "Pronto",
-        "Entregue",
-        "Cancelado"
-    ]
-
-    if novo_status not in status_validos:
-        return {
-            "erro": "Status inválido."
-        }
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    try:
-
-        # ------------------------------------------
-        # BUSCAR PEDIDO
-        # ------------------------------------------
-
-        cursor.execute("""
-            SELECT id, status
-            FROM pedidos
-            WHERE id = %s
-        """, (pedido_id,))
-
-        pedido = cursor.fetchone()
-
-        if not pedido:
-            raise Exception("Pedido não encontrado.")
-
-        status_anterior = pedido[1]
-
-        # ------------------------------------------
-        # CANCELAR PEDIDO
-        # DEVOLVER PRODUTOS AO ESTOQUE
-        # ------------------------------------------
-
-        if novo_status == "Cancelado" and status_anterior != "Cancelado":
-
-            cursor.execute("""
-                SELECT produto_id, quantidade
-                FROM itens_pedido
-                WHERE pedido_id = %s
-            """, (pedido_id,))
-
-            itens = cursor.fetchall()
-
-            for item in itens:
-
-                produto_id = item[0]
-                quantidade = item[1]
-
-                # Devolver quantidade ao estoque
-                cursor.execute("""
-                    UPDATE produtos
-                    SET estoque = estoque + %s
-                    WHERE id = %s
-                """, (
-                    quantidade,
-                    produto_id
-                ))
-
-                # Registrar movimentação
-                cursor.execute("""
-                    INSERT INTO movimentacoes_estoque
-                    (
-                        produto_id,
-                        tipo,
-                        quantidade,
-                        observacao
-                    )
-                    VALUES
-                    (
-                        %s,
-                        'Entrada',
-                        %s,
-                        %s
-                    )
-                """, (
-                    produto_id,
-                    quantidade,
-                    f"Cancelamento do Pedido #{pedido_id}"
-                ))
-
-        # ------------------------------------------
-        # REATIVAR PEDIDO
-        # RETIRAR NOVAMENTE DO ESTOQUE
-        # ------------------------------------------
-
-        elif status_anterior == "Cancelado" and novo_status != "Cancelado":
-
-            cursor.execute("""
-                SELECT produto_id, quantidade
-                FROM itens_pedido
-                WHERE pedido_id = %s
-            """, (pedido_id,))
-
-            itens = cursor.fetchall()
-
-            for item in itens:
-
-                produto_id = item[0]
-                quantidade = item[1]
-
-                # Verificar estoque
-                cursor.execute("""
-                    SELECT estoque
-                    FROM produtos
-                    WHERE id = %s
-                """, (produto_id,))
-
-                produto = cursor.fetchone()
-
-                if not produto:
-                    raise Exception(
-                        f"Produto {produto_id} não encontrado."
-                    )
-
-                estoque = produto[0] or 0
-
-                if quantidade > estoque:
-                    raise Exception(
-                        f"Estoque insuficiente para reativar "
-                        f"o produto {produto_id}."
-                    )
-
-                # Retirar novamente do estoque
-                cursor.execute("""
-                    UPDATE produtos
-                    SET estoque = estoque - %s
-                    WHERE id = %s
-                """, (
-                    quantidade,
-                    produto_id
-                ))
-
-                # Registrar movimentação
-                cursor.execute("""
-                    INSERT INTO movimentacoes_estoque
-                    (
-                        produto_id,
-                        tipo,
-                        quantidade,
-                        observacao
-                    )
-                    VALUES
-                    (
-                        %s,
-                        'Saída',
-                        %s,
-                        %s
-                    )
-                """, (
-                    produto_id,
-                    quantidade,
-                    f"Reativação do Pedido #{pedido_id}"
-                ))
-
-        # ------------------------------------------
-        # ATUALIZAR STATUS DO PEDIDO
-        # ------------------------------------------
-
-        cursor.execute("""
-            UPDATE pedidos
-            SET status = %s
-            WHERE id = %s
-        """, (
-            novo_status,
-            pedido_id
-        ))
-
-        banco.commit()
-
-        return {
-            "mensagem": "Status atualizado com sucesso!",
-            "pedido_id": pedido_id,
-            "status_anterior": status_anterior,
-            "novo_status": novo_status
-        }
-
-    except Exception as erro:
-
-        banco.rollback()
-
-        return {
-            "erro": str(erro)
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-
-
-# ==========================================
-# PÁGINA - LISTA DE PEDIDOS
-# ==========================================
-
-@app.get("/pedidos")
-def pagina_pedidos():
-    return FileResponse("templates/pedidos.html")
-
-# ============================================================
-# PÁGINA - RELATÓRIOS
-# ============================================================
-
-@app.get("/relatorios")
-def pagina_relatorios():
-    return FileResponse("templates/relatorios.html")
-
-
-# ==========================================
-# API - FINANCEIRO
-# ==========================================
-
-# ==========================================
-# API - FINANCEIRO
-# ==========================================
-
-@app.get("/api/financeiro")
-def listar_financeiro():
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    try:
-
-        # TOTAL DE VENDAS
-        cursor.execute("""
-            SELECT COALESCE(SUM(valor_total), 0) AS total
-            FROM pedidos
-        """)
-
-        resultado_vendas = cursor.fetchone()
-        total_vendas = float(resultado_vendas["total"] or 0)
-
-        # TOTAL DE SAÍDAS FINANCEIRAS
-        cursor.execute("""
-            SELECT COALESCE(SUM(valor), 0) AS total
-            FROM movimentacoes_financeiras
-            WHERE tipo = 'Saída'
-        """)
-
-        resultado_saidas = cursor.fetchone()
-        total_saidas = float(resultado_saidas["total"] or 0)
-
-        # ENTRADAS = VENDAS
-        total_entradas = total_vendas
-
-        # SALDO
-        saldo = total_entradas - total_saidas
-
-        # LISTAR MOVIMENTAÇÕES FINANCEIRAS
-        cursor.execute("""
-            SELECT
-                id,
-                descricao,
-                tipo,
-                valor,
-                data_movimentacao AS data
-            FROM movimentacoes_financeiras
-            ORDER BY id DESC
-        """)
-
-        movimentacoes = cursor.fetchall()
-
-        for movimento in movimentacoes:
-
-            if movimento["valor"] is not None:
-                movimento["valor"] = float(movimento["valor"])
-
-            if movimento["data"] is not None:
-                movimento["data"] = movimento["data"].isoformat()
-
-        return {
-            "total_vendas": total_vendas,
-            "total_entradas": total_entradas,
-            "total_saidas": total_saidas,
-            "saldo": saldo,
-            "movimentacoes": movimentacoes
-        }
-
-    finally:
-        cursor.close()
-        banco.close()
-
-
-# ==========================================
-# PÁGINA - FINANCEIRO
-# ==========================================
-
-@app.get("/financeiro")
-def pagina_financeiro():
-    return FileResponse("templates/financeiro.html")
-
-
-# ==========================================
-# PÁGINA - NOVA SAÍDA
-# ==========================================
-
-@app.get("/nova_saida")
-def pagina_nova_saida():
-    return FileResponse("templates/nova_saida.html")
-
-
-# ==========================================
-# API - REGISTRAR SAÍDA FINANCEIRA
-# ==========================================
-
-@app.post("/api/financeiro/saida")
-async def registrar_saida(request: Request):
-
-    dados = await request.json()
-
-    descricao = dados.get("descricao")
-    valor = dados.get("valor")
-    observacao = dados.get("observacao")
-
-    if not descricao:
-        return {
-            "erro": "A descrição é obrigatória."
-        }
-
-    if not valor:
-        return {
-            "erro": "O valor é obrigatório."
-        }
-
-    try:
-        valor = float(str(valor).replace(",", "."))
-    except (ValueError, TypeError):
-        return {
-            "erro": "Valor inválido."
-        }
-
-    if valor <= 0:
-        return {
-            "erro": "O valor deve ser maior que zero."
-        }
-
-    banco = conectar_banco()
-    cursor = banco.cursor()
-
-    try:
-
-        descricao_completa = descricao
-
-        if observacao:
-            descricao_completa += f" - {observacao}"
-
-        cursor.execute(
-            """
-            INSERT INTO movimentacoes_financeiras
-            (descricao, tipo, valor)
-            VALUES (%s, %s, %s)
-            """,
-            (
-                descricao_completa,
-                "Saída",
-                valor
-            )
-        )
-
-        banco.commit()
-
-        return {
-            "sucesso": True,
-            "mensagem": "Saída registrada com sucesso."
-        }
-
-    except Exception as erro:
-
-        banco.rollback()
-
-        return {
-            "sucesso": False,
-            "erro": str(erro)
-        }
-
-    finally:
-
-        cursor.close()
-        banco.close()
-# ==========================================s
-# PÁGINA - NOVO PEDIDO
-# ==========================================
-
-@app.get("/novo-pedido")
-def pagina_novo_pedido():
-    
-    return FileResponse("templates/novo_pedido.html")
-
-# =========================================================
-#                    ESTOQUE
-# =========================================================
-
-
-# ==========================================
-# PÁGINA - ESTOQUE
-# ==========================================
-
-@app.get("/estoque")
-def pagina_estoque():
-    return FileResponse("templates/estoque.html")
-
-
-# ==========================================
-# API - LISTAR ESTOQUE
-# ==========================================
-
-@app.get("/api/estoque")
-def listar_estoque():
-
-    banco = conectar_banco()
-    cursor = banco.cursor(dictionary=True)
-
-    cursor.execute("""
-        SELECT
-            id,
-            nome,
-            descricao,
-            preco,
-            estoque
-        FROM produtos
-        ORDER BY nome
-    """)
-
-    produtos = cursor.fetchall()
-
-    cursor.close()
-    banco.close()
 
     for produto in produtos:
 
@@ -2323,14 +1607,55 @@ def listar_estoque():
 
         if estoque == 0:
             produto["situacao"] = "Sem estoque"
+
         elif estoque <= 5:
             produto["situacao"] = "Estoque baixo"
+
         else:
             produto["situacao"] = "Estoque normal"
 
+    cursor.close()
+    banco.close()
+
     return produtos
 
+# ==========================================
+# API - BUSCAR UM PRODUTO PELO ID
+# ==========================================
 
+@app.get("/api/produtos/{produto_id}")
+def buscar_produto(produto_id: int):
+
+    banco = conectar_banco()
+
+    cursor = banco.cursor(dictionary=True)
+
+    cursor.execute(
+        """
+        SELECT
+            id,
+            nome,
+            descricao,
+            preco,
+            estoque,
+            imagem
+        FROM produtos
+        WHERE id = %s
+        """,
+        (produto_id,)
+    )
+
+    produto = cursor.fetchone()
+
+    cursor.close()
+    banco.close()
+
+    if not produto:
+        return {
+            "erro": "Produto não encontrado"
+        }
+
+    return produto
 # ==========================================
 # API - ENTRADA DE ESTOQUE
 # ==========================================
@@ -2591,7 +1916,77 @@ def limpar_movimentacoes():
         cursor.close()
         banco.close()
 
-        
+# ==========================================
+# API - CADASTRAR SAÍDA FINANCEIRA
+# ==========================================
+
+class SaidaFinanceira(BaseModel):
+    descricao: str
+    valor: float
+    observacao: str = ""
+
+
+@app.post("/api/financeiro/saida")
+async def cadastrar_saida_financeira(dados: SaidaFinanceira):
+
+    descricao = dados.descricao
+    valor = dados.valor
+    observacao = dados.observacao
+
+    if not descricao or valor is None:
+        return {
+            "erro": "Descrição e valor são obrigatórios"
+        }
+
+    try:
+        valor = float(valor)
+    except (ValueError, TypeError):
+        return {
+            "erro": "O valor deve ser um número válido"
+        }
+
+    if valor <= 0:
+        return {
+            "erro": "O valor deve ser maior que zero"
+        }
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            INSERT INTO movimentacoes_financeiras
+            (descricao, tipo, valor, observacao)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                descricao,
+                "Saída",
+                valor,
+                observacao or ""
+            )
+        )
+
+        banco.commit()
+
+        return {
+            "mensagem": "Saída registrada com sucesso"
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": f"Erro ao registrar saída: {str(erro)}"
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
 
 # ==========================================
 # API - EXCLUIR SAÍDA FINANCEIRA
@@ -2626,6 +2021,131 @@ def excluir_saida(saida_id: int):
 
     finally:
 
+        cursor.close()
+        banco.close()
+
+
+# ==========================================
+# API - EXCLUIR ENTRADA FINANCEIRA
+# ==========================================
+
+@app.delete("/api/financeiro/entrada/{entrada_id}")
+def excluir_entrada(entrada_id: int):
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        cursor.execute("""
+            DELETE FROM movimentacoes_financeiras
+            WHERE id = %s
+        """, (entrada_id,))
+
+        banco.commit()
+
+        return {
+            "mensagem": "Entrada excluída com sucesso!"
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": str(erro)
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
+
+# ============================================================
+# API - CONSULTAR DADOS FINANCEIROS
+# ============================================================
+
+@app.get("/api/financeiro")
+def obter_financeiro():
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+        
+        # ----------------------------------------------------
+        # TOTAL DE VENDAS
+        # ----------------------------------------------------
+        cursor.execute("""
+            SELECT COALESCE(SUM(valor_total), 0)
+            FROM pedidos
+            WHERE status != 'Cancelado'
+        """)
+
+        total_vendas = cursor.fetchone()[0] or 0
+
+        # ----------------------------------------------------
+        # TOTAL DE ENTRADAS
+        # ----------------------------------------------------
+        cursor.execute("""
+            SELECT COALESCE(SUM(valor), 0)
+            FROM movimentacoes_financeiras
+            WHERE tipo = 'Entrada'
+        """)
+
+        entradas_financeiras = cursor.fetchone()[0] or 0
+        total_entradas = total_vendas + entradas_financeiras
+        # ----------------------------------------------------
+        # TOTAL DE SAÍDAS
+        # ----------------------------------------------------
+        cursor.execute("""
+            SELECT COALESCE(SUM(valor), 0)
+            FROM movimentacoes_financeiras
+            WHERE tipo = 'Saída'
+        """)
+
+        total_saidas = cursor.fetchone()[0] or 0
+
+        # ----------------------------------------------------
+        # SALDO
+        # ----------------------------------------------------
+        saldo = total_entradas - total_saidas
+
+        # ----------------------------------------------------
+        # MOVIMENTAÇÕES FINANCEIRAS
+        # ----------------------------------------------------
+        cursor.execute("""
+            SELECT
+                id,
+                descricao,
+                tipo,
+                valor,
+                data_movimentacao
+            FROM movimentacoes_financeiras
+            ORDER BY data_movimentacao DESC, id DESC
+        """)
+
+        movimentacoes = cursor.fetchall()
+
+        lista_movimentacoes = []
+
+        for movimento in movimentacoes:
+            lista_movimentacoes.append({
+                "id": movimento[0],
+                "descricao": movimento[1],
+                "tipo": movimento[2],
+                "valor": float(movimento[3]),
+                "data": movimento[4]
+            })
+
+        return {
+            "total_vendas": float(total_vendas),
+            "total_entradas": float(total_entradas),
+            "total_saidas": float(total_saidas),
+            "saldo": float(saldo),
+            "movimentacoes": lista_movimentacoes
+        }
+
+    finally:
         cursor.close()
         banco.close()
 # ==========================================
@@ -2996,3 +2516,38 @@ async def imprimir_pedido(pedido_id: int):
 
         cursor.close()
         banco.close()
+
+
+# ==========================================
+# PÁGINA - FINANCEIRO
+# ==========================================
+
+@app.get("/financeiro")
+def pagina_financeiro():
+    return FileResponse("templates/financeiro.html")
+
+
+# ==========================================
+# PÁGINA - RELATÓRIOS
+# ==========================================
+
+@app.get("/relatorios")
+def pagina_relatorios():
+    return FileResponse("templates/relatorios.html")
+
+
+# ==========================================
+# PÁGINA - NOVA SAÍDA FINANCEIRA
+# ==========================================
+
+@app.get("/nova_saida")
+def pagina_nova_saida():
+    return FileResponse("templates/nova_saida.html")
+
+# ==========================================
+# PÁGINA - NOVA ENTRADA FINANCEIRA
+# ==========================================
+
+@app.get("/nova_entrada")
+def pagina_nova_entrada():
+    return FileResponse("templates/nova_entrada.html")
