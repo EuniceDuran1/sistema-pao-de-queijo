@@ -828,6 +828,213 @@ def listar_pedidos():
     finally:
         cursor.close()
         banco.close()
+
+# ==========================================
+# API - CRIAR PEDIDO
+# ==========================================
+
+@app.post("/api/pedidos")
+def criar_pedido(dados: dict):
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        cliente_id = dados.get("cliente_id")
+        itens = dados.get("itens", [])
+
+        if not cliente_id:
+            return {
+                "erro": "Cliente não informado"
+            }
+
+        if not itens:
+            return {
+                "erro": "Nenhum produto foi informado"
+            }
+
+        # ------------------------------------------
+        # CRIAR O PEDIDO
+        # ------------------------------------------
+
+        cursor.execute(
+            """
+            INSERT INTO pedidos
+            (cliente_id, valor_total, status)
+            VALUES (%s, %s, %s)
+            """,
+            (
+                cliente_id,
+                0,
+                "Recebido"
+            )
+        )
+
+        pedido_id = cursor.lastrowid
+
+        # ------------------------------------------
+        # INSERIR OS ITENS DO PEDIDO
+        # ------------------------------------------
+
+        valor_total = 0
+
+        for item in itens:
+
+            produto_id = item.get("produto_id")
+            quantidade = int(item.get("quantidade", 0))
+
+            if not produto_id:
+                raise Exception(
+                    "Produto não informado"
+                )
+
+            if quantidade <= 0:
+                raise Exception(
+                    "Quantidade inválida"
+                )
+
+            # Buscar o preço atual do produto
+            cursor.execute(
+                """
+                SELECT nome, preco
+                FROM produtos
+                WHERE id = %s
+                """,
+                (produto_id,)
+            )
+
+            produto = cursor.fetchone()
+
+            if not produto:
+                raise Exception(
+                    f"Produto ID {produto_id} não encontrado"
+                )
+
+            preco_unitario = float(produto[1])
+
+            subtotal = preco_unitario * quantidade
+
+            valor_total += subtotal
+
+            # Inserir item do pedido
+            cursor.execute(
+                """
+                INSERT INTO itens_pedido
+                (pedido_id, produto_id, quantidade, preco_unitario)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    pedido_id,
+                    produto_id,
+                    quantidade,
+                    preco_unitario
+                )
+            )
+
+        # ------------------------------------------
+        # ATUALIZAR O VALOR TOTAL DO PEDIDO
+        # ------------------------------------------
+
+        cursor.execute(
+            """
+            UPDATE pedidos
+            SET valor_total = %s
+            WHERE id = %s
+            """,
+            (
+                valor_total,
+                pedido_id
+            )
+        )
+
+        banco.commit()
+
+        return {
+            "mensagem": "Pedido criado com sucesso",
+            "pedido_id": pedido_id,
+            "valor_total": valor_total
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": str(erro)
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
+
+# ==========================================
+# API - DETALHES DO PEDIDO
+# ==========================================
+
+@app.get("/api/pedidos/{pedido_id}")
+def detalhes_pedido(pedido_id: int):
+
+    banco = conectar_banco()
+    cursor = banco.cursor(dictionary=True)
+
+    try:
+
+        # Buscar os dados principais do pedido
+        cursor.execute("""
+            SELECT
+                p.id,
+                p.cliente_id,
+                p.valor_total,
+                p.status,
+                p.data_pedido,
+                c.nome AS cliente
+            FROM pedidos p
+            LEFT JOIN clientes c
+                ON p.cliente_id = c.id
+            WHERE p.id = %s
+        """, (pedido_id,))
+
+        pedido = cursor.fetchone()
+
+        if not pedido:
+            return {
+                "erro": "Pedido não encontrado"
+            }
+
+        # Buscar os itens do pedido
+        cursor.execute("""
+            SELECT
+                ip.produto_id,
+                pr.nome AS produto_nome,
+                ip.quantidade,
+                ip.preco_unitario,
+                (ip.quantidade * ip.preco_unitario) AS subtotal
+            FROM itens_pedido ip
+            LEFT JOIN produtos pr
+                ON ip.produto_id = pr.id
+            WHERE ip.pedido_id = %s
+            ORDER BY ip.id
+        """, (pedido_id,))
+
+        itens = cursor.fetchall()
+
+        pedido["itens"] = itens
+
+        return pedido
+
+    except Exception as erro:
+
+        return {
+            "erro": str(erro)
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
+
 # ==========================================
 # PÁGINA DE PEDIDOS
 # ==========================================
@@ -1501,6 +1708,98 @@ def editar_produto(produto_id: int):
         "templates/editar_produto.html"
     )
 
+
+# ==========================================
+# API - EXCLUIR PRODUTO
+# ==========================================
+
+@app.delete("/api/produtos/{produto_id}")
+def excluir_produto(produto_id: int):
+
+    banco = conectar_banco()
+    cursor = banco.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            DELETE FROM produtos
+            WHERE id = %s
+            """,
+            (produto_id,)
+        )
+
+        banco.commit()
+
+        if cursor.rowcount == 0:
+            return {
+                "erro": "Produto não encontrado"
+            }
+
+        return {
+            "mensagem": "Produto excluído com sucesso"
+        }
+
+    except Exception as erro:
+
+        banco.rollback()
+
+        return {
+            "erro": str(erro)
+        }
+
+    finally:
+
+        cursor.close()
+        banco.close()
+# ==========================================
+# API - LISTAR TODOS OS PRODUTOS
+# ==========================================
+
+@app.get("/api/produtos")
+def listar_produtos():
+
+    banco = conectar_banco()
+
+    cursor = banco.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT
+            id,
+            nome,
+            descricao,
+            preco,
+            estoque,
+            imagem
+        FROM produtos
+        ORDER BY nome
+    """)
+
+    produtos = cursor.fetchall()
+
+    for produto in produtos:
+
+        estoque = produto["estoque"]
+
+        if estoque is None:
+            estoque = 0
+
+        produto["estoque"] = estoque
+
+        if estoque == 0:
+            produto["situacao"] = "Sem estoque"
+
+        elif estoque <= 5:
+            produto["situacao"] = "Estoque baixo"
+
+        else:
+            produto["situacao"] = "Estoque normal"
+
+    cursor.close()
+    banco.close()
+
+    return produtos
+
 # ==========================================
 # API - EDITAR PRODUTO
 # ==========================================
@@ -1570,55 +1869,6 @@ async def atualizar_produto(
 
         cursor.close()
         banco.close()
-
-# ==========================================
-# API - LISTAR TODOS OS PRODUTOS
-# ==========================================
-
-@app.get("/api/produtos")
-def listar_produtos():
-
-    banco = conectar_banco()
-
-    cursor = banco.cursor(dictionary=True)
-
-    cursor.execute("""
-        SELECT
-            id,
-            nome,
-            descricao,
-            preco,
-            estoque,
-            imagem
-        FROM produtos
-        ORDER BY nome
-    """)
-
-    produtos = cursor.fetchall()
-
-    for produto in produtos:
-
-        estoque = produto["estoque"]
-
-        if estoque is None:
-            estoque = 0
-
-        produto["estoque"] = estoque
-
-        if estoque == 0:
-            produto["situacao"] = "Sem estoque"
-
-        elif estoque <= 5:
-            produto["situacao"] = "Estoque baixo"
-
-        else:
-            produto["situacao"] = "Estoque normal"
-
-    cursor.close()
-    banco.close()
-
-    return produtos
-
 # ==========================================
 # API - BUSCAR UM PRODUTO PELO ID
 # ==========================================
@@ -1656,6 +1906,16 @@ def buscar_produto(produto_id: int):
         }
 
     return produto
+
+
+# ==========================================
+# PÁGINA - NOVO PEDIDO
+# ==========================================
+
+@app.get("/novo-pedido")
+def pagina_novo_pedido():
+    return FileResponse("templates/novo_pedido.html")
+
 # ==========================================
 # API - ENTRADA DE ESTOQUE
 # ==========================================
