@@ -4,214 +4,483 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Estoque - Queridin DI MINAS</title>
 
+
     <style>
+        /* Modal de movimentação - padrão Queridin Di Minas */
+
+        #modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            background: rgba(45, 30, 20, 0.62);
+            backdrop-filter: blur(3px);
+            padding: 20px;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        #modal .modal-conteudo {
+            width: 100%;
+            max-width: 520px;
+            padding: 28px;
+            background: #fffaf5;
+            border-radius: 16px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        #modal .modal-conteudo label {
+            display: block;
+            margin: 16px 0 7px;
+            color: #65432e;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #modal .modal-conteudo input,
+        #modal .modal-conteudo select {
+            display: block;
+            width: 100%;
+            min-height: 44px;
+            padding: 11px 12px;
+            border: 1px solid #ddcbbb;
+            border-radius: 9px;
+            background: #fff;
+            color: #3d3028;
+            font: inherit;
+            box-sizing: border-box;
+        }
+
+        #modal .modal-conteudo input:focus,
+        #modal .modal-conteudo select:focus {
+            outline: 2px solid #c99b70;
+            border-color: #805b40;
+        }
+
+        #modal .modal-botoes {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 26px;
+        }
+
+        #modal .modal-botoes button {
+            min-width: 110px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 9px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        #modal .modal-botoes button:hover {
+            opacity: 0.86;
+        }
+
+        #modal .btn-cancelar {
+            background: #e8ded2;
+            color: #65432e;
+        }
+
+        #modal .btn-salvar {
+            background: #80501f;
+            color: #fff;
+        }
+
+        @media (max-width: 500px) {
+            #modal .modal-conteudo {
+                padding: 22px 18px;
+            }
+
+            #modal .modal-botoes button {
+                flex: 1;
+            }
+        }
+
+
+        /* ===== IDENTIDADE VISUAL - CONTROLE DE ESTOQUE ===== */
+
         * {
             box-sizing: border-box;
         }
 
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f8f1e7;
-            color: #5b2d06;
+            padding: 24px;
+            background: #f8f5f1;
+            color: #3f3026;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 15px;
         }
 
-        .container {
-            padding: 30px;
+        body>a {
+            display: inline-block;
+            margin-bottom: 18px;
+            color: #80420b;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        body>a:hover {
+            text-decoration: underline;
         }
 
         h1 {
-            margin-bottom: 8px;
-            color: #8a4b08;
+            margin: 10px 0;
+            color: #80420b;
+            font-size: 30px;
+        }
+
+        h2 {
+            color: #80420b;
+        }
+
+        body>p {
+            color: #74665b;
+            margin-bottom: 18px;
+        }
+
+        /* Botões de ação */
+
+        body>button {
+            margin: 4px 6px 18px 0;
+            padding: 11px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #804b20;
+            color: #fffaf4;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        body>button:hover {
+            background: #633816;
+            transform: translateY(-1px);
+        }
+
+        /* Tabelas */
+
+        table {
+            width: 100%;
+            margin: 16px 0 28px;
+            border-collapse: collapse;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(70, 45, 25, 0.07);
+        }
+
+        th {
+            padding: 16px 14px;
+            background: #995000;
+            color: #ffffff;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee4da;
+        }
+
+        tbody tr:hover {
+            background: #fff6ec;
+        }
+
+        /* Histórico de movimentações */
+
+        body>h2 {
+            margin-top: 28px;
+        }
+
+        /* Ajuste para telas menores */
+
+        @media (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+
+
+
+        /* Botões de ação do estoque */
+        .acoes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 18px 0 24px;
+        }
+
+        .acoes button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: Arial, Helvetica, sans-serif;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .acoes button:hover {
+            transform: translateY(-2px);
+        }
+
+        .acoes .btn-entrada {
+            background: #218838;
+            color: #ffffff;
+        }
+
+        .acoes .btn-entrada:hover {
+            background: #176b2c;
+        }
+
+        .acoes .btn-saida {
+            background: #c0392b;
+            color: #ffffff;
+        }
+
+        .acoes .btn-saida:hover {
+            background: #962d22;
+        }
+
+        .acoes .btn-atualizar {
+            background: #995000;
+            color: #ffffff;
+        }
+
+        .acoes .btn-atualizar:hover {
+            background: #7d4000;
+        }
+
+        .btn-limpar {
+            background: #dc3545;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 11px 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-limpar:hover {
+            background: #b02a37;
+        }
+
+
+        /* Melhorias visuais do Controle de Estoque */
+        body {
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 18px 0 4px;
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        h2 {
+            margin: 28px 0 14px;
+            font-size: 23px;
         }
 
         .subtitulo {
-            margin-bottom: 25px;
-            color: #7a6250;
+            margin-bottom: 16px;
+            color: #6b5748;
         }
 
         .acoes {
             display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
             flex-wrap: wrap;
+            gap: 12px;
+            margin: 18px 0 24px;
         }
 
-        button {
+        .acoes button,
+        .btn-voltar {
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .acoes button {
+            padding: 12px 18px;
             border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
+            border-radius: 9px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 15px;
-            font-weight: bold;
+        }
+
+        .acoes button:hover {
+            filter: brightness(0.93);
+            transform: translateY(-1px);
         }
 
         .btn-entrada {
-            background: #4caf50;
-            color: white;
+            background: #218838;
         }
 
         .btn-saida {
-            background: #d9534f;
-            color: white;
+            background: #c0392b;
         }
 
         .btn-atualizar {
-            background: #8a4b08;
-            color: white;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .card h2 {
-            margin-top: 0;
-            color: #8a4b08;
+            background: #995000;
         }
 
         table {
-            width: 100%;
-            border-collapse: collapse;
+            border-radius: 12px;
+            box-shadow: 0 5px 18px rgba(70, 45, 25, 0.08);
         }
 
         th {
-            background: #8a4b08;
-            color: white;
-            padding: 13px;
-            text-align: left;
+            padding: 14px 12px;
+            background: #995000;
+            color: #fff;
         }
 
         td {
-            padding: 13px;
-            border-bottom: 1px solid #eee;
-        }
-
-        tr:hover {
-            background: #fff8ef;
-        }
-
-        .estoque-ok {
-            color: #2e7d32;
-            font-weight: bold;
-        }
-
-        .estoque-baixo {
-            color: #d68910;
-            font-weight: bold;
-        }
-
-        .estoque-zero {
-            color: #c62828;
-            font-weight: bold;
-        }
-
-        .vazio {
-            text-align: center;
-            padding: 25px;
-            color: #777;
-        }
-
-        .mensagem {
             padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            display: none;
+            border-bottom: 1px solid #eee4da;
         }
 
-        .sucesso {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .erro {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-conteudo {
-            background: white;
-            width: 90%;
-            max-width: 450px;
-            margin: 8% auto;
-            padding: 25px;
-            border-radius: 12px;
-        }
-
-        .modal-conteudo h2 {
-            margin-top: 0;
-            color: #8a4b08;
-        }
-
-        label {
-            display: block;
-            margin-top: 15px;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        select,
-        input {
-            width: 100%;
-            padding: 11px;
-            border: 1px solid #ccc;
-            border-radius: 7px;
-            font-size: 15px;
-        }
-
-        .modal-botoes {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .btn-cancelar {
-            background: #ddd;
-            color: #333;
-        }
-
-        .btn-salvar {
-            background: #8a4b08;
-            color: white;
+        tbody tr:hover {
+            background: #fff6ec;
         }
 
         @media (max-width: 700px) {
-            .container {
-                padding: 15px;
+            body {
+                padding: 12px;
+            }
+
+            .acoes button {
+                width: 100%;
             }
 
             table {
-                font-size: 13px;
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
             }
 
-            th,
-            td {
-                padding: 8px;
+            h1 {
+                font-size: 24px;
             }
         }
+
+
+
+        /* Indicadores do estoque */
+        .indicadores-estoque {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            margin: 24px 0 28px;
+        }
+
+        .indicador {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 22px;
+            background: #ffffff;
+            border: 1px solid #eee4da;
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(70, 45, 25, 0.07);
+        }
+
+        .indicador-icone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 54px;
+            height: 54px;
+            flex-shrink: 0;
+            background: #fcebd7;
+            border-radius: 12px;
+            font-size: 27px;
+        }
+
+        .indicador p {
+            margin: 0 0 5px;
+            color: #6b5748;
+            font-size: 14px;
+        }
+
+        .indicador strong {
+            color: #995000;
+            font-size: 28px;
+        }
+
+        .indicador-alerta .indicador-icone {
+            background: #fbe5e5;
+        }
+
+        .indicador-alerta strong {
+            color: #c0392b;
+        }
+
+        @media (max-width: 700px) {
+            .indicadores-estoque {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Alinhamento das colunas do histórico de movimentações */
+        table:has(#tabela-movimentacoes) thead th:nth-child(1),
+        table:has(#tabela-movimentacoes) tbody td:nth-child(1) {
+            text-align: center !important;
+        }
+
+        table:has(#tabela-movimentacoes) thead th:nth-child(3),
+        table:has(#tabela-movimentacoes) tbody td:nth-child(3) {
+            text-align: center !important;
+        }
+
+        table:has(#tabela-movimentacoes) thead th:nth-child(4),
+        table:has(#tabela-movimentacoes) tbody td:nth-child(4) {
+            text-align: right !important;
+            padding-right: 20px;
+        }
+
+        table:has(#tabela-movimentacoes) thead th:nth-child(6),
+        table:has(#tabela-movimentacoes) tbody td:nth-child(6) {
+            text-align: center !important;
+        }
     </style>
+
 </head>
 
 <body>
+
+
+    <a href="/" class="btn-voltar">← Voltar ao Dashboard</a>
+
 
     <div class="container">
 
@@ -241,6 +510,35 @@
 
             <h2>Produtos em Estoque</h2>
 
+
+            <!-- Indicadores do estoque -->
+            <div class="indicadores-estoque">
+                <div class="indicador">
+                    <div class="indicador-icone">📦</div>
+                    <div>
+                        <p>Produtos cadastrados</p>
+                        <strong id="totalProdutos">—</strong>
+                    </div>
+                </div>
+
+                <div class="indicador">
+                    <div class="indicador-icone">🧀</div>
+                    <div>
+                        <p>Unidades em estoque</p>
+                        <strong id="totalUnidades">—</strong>
+                    </div>
+                </div>
+
+                <div class="indicador indicador-alerta">
+                    <div class="indicador-icone">⚠️</div>
+                    <div>
+                        <p>Estoque baixo</p>
+                        <strong id="totalEstoqueBaixo">—</strong>
+                    </div>
+                </div>
+            </div>
+
+
             <table>
 
                 <thead>
@@ -267,15 +565,32 @@
 
         </div>
 
+        <div class="card">
+            <h2>Histórico de Movimentações</h2>
+            <button type="button" class="btn-limpar" onclick="limparHistorico()">
+                🗑️ Limpar histórico
+            </button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Produto</th>
+                        <th>Tipo</th>
+                        <th>Quantidade</th>
+                        <th>Observação</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-movimentacoes">
+                    <tr>
+                        <td colspan="6" style="padding: 20px; text-align: center;">
+                            Carregando movimentações...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    </div>
-
-
-    <!-- MODAL -->
-
-    </div>
-
 
     <!-- MODAL -->
     <div id="modal" class="modal">
@@ -330,94 +645,107 @@
         // CARREGAR ESTOQUE
         // ============================
 
-        async function carregarEstoque() {
 
+        async function carregarEstoque() {
             const tabela = document.getElementById("tabelaEstoque");
 
+            if (!tabela) {
+                console.error("Elemento tabelaEstoque não encontrado.");
+                return;
+            }
+
             tabela.innerHTML = `
-            <tr>
-                <td colspan="5" class="vazio">
-                    Carregando estoque...
-                </td>
-            </tr>
-        `;
+        <tr>
+            <td colspan="5" class="vazio">
+                Carregando estoque...
+            </td>
+        </tr>
+    `;
 
             try {
+                const resposta = await fetch("/api/produtos");
 
-                const resposta = await fetch("/api/estoque");
+                if (!resposta.ok) {
+                    throw new Error(`Erro HTTP: ${resposta.status}`);
+                }
 
                 const dados = await resposta.json();
 
-                tabela.innerHTML = "";
+                console.log("Resposta da API:", dados);
 
-                if (!dados || dados.length === 0) {
+                if (!Array.isArray(dados)) {
+                    throw new Error("A API não retornou uma lista de produtos.");
+                }
 
+                const totalProdutos = document.getElementById("totalProdutos");
+                const totalUnidades = document.getElementById("totalUnidades");
+                const totalEstoqueBaixo = document.getElementById("totalEstoqueBaixo");
+                if (totalProdutos) totalProdutos.textContent = dados.length;
+                if (totalUnidades) {
+                    totalUnidades.textContent = dados.reduce(
+                        (total, produto) => total + Number(produto.estoque ?? 0), 0
+                    );
+                }
+                if (totalEstoqueBaixo) {
+                    totalEstoqueBaixo.textContent = dados.filter(
+                        produto => Number(produto.estoque ?? 0) <= 5
+                    ).length;
+                }
+
+                if (dados.length === 0) {
                     tabela.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="vazio">
-                            Nenhum produto encontrado.
-                        </td>
-                    </tr>
-                `;
-
+                <tr>
+                    <td colspan="5" class="vazio">
+                        Nenhum produto encontrado.
+                    </td>
+                </tr>
+            `;
                     return;
                 }
 
-                dados.forEach(produto => {
+                tabela.innerHTML = "";
 
-                    const estoque = Number(produto.estoque || 0);
+                dados.forEach(produto => {
+                    const estoque = Number(produto.estoque ?? 0);
+                    const preco = Number(produto.preco ?? 0);
 
                     let classe = "estoque-ok";
-                    let situacao = "Disponível";
+                    let situacao = "Estoque normal";
 
                     if (estoque === 0) {
-
                         classe = "estoque-zero";
                         situacao = "Sem estoque";
-
-                    } else if (estoque <= 10) {
-
+                    } else if (estoque <= 5) {
                         classe = "estoque-baixo";
                         situacao = "Estoque baixo";
                     }
 
-                    const preco = Number(produto.preco || 0);
-
                     const linha = document.createElement("tr");
 
                     linha.innerHTML = `
-                    <td>${produto.id}</td>
+                <td>${produto.id}</td>
+                <td></td>
+                <td>R$ ${preco.toFixed(2).replace(".", ",")}</td>
+                <td>${estoque}</td>
+                <td class="${classe}">${situacao}</td>
+            `;
 
-                    <td>${produto.nome}</td>
-
-                    <td>
-                        R$ ${preco.toFixed(2).replace(".", ",")}
-                    </td>
-
-                    <td>
-                        ${estoque}
-                    </td>
-
-                    <td class="${classe}">
-                        ${situacao}
-                    </td>
-                `;
+                    // Inserir o nome como texto, sem interpretar HTML.
+                    linha.children[1].textContent = produto.nome ?? "";
 
                     tabela.appendChild(linha);
-
                 });
 
             } catch (erro) {
-
                 console.error("Erro ao carregar estoque:", erro);
 
                 tabela.innerHTML = `
-                <tr>
-                    <td colspan="5" class="vazio">
-                        Não foi possível carregar o estoque.
-                    </td>
-                </tr>
-            `;
+            <tr>
+                <td colspan="5" class="vazio">
+                    Não foi possível carregar o estoque.
+                </td>
+            </tr>
+        `;
             }
         }
 
@@ -466,31 +794,40 @@
         // ============================
 
         function abrirModal(tipo) {
-
             tipoMovimentacao = tipo;
 
             const modal = document.getElementById("modal");
-
             const titulo = document.getElementById("tituloModal");
+            const quantidade = document.getElementById("quantidade");
+            const observacao = document.getElementById("observacao");
 
-            if (tipo === "entrada") {
-
-                titulo.textContent =
-                    "➕ Entrada de Estoque";
-
-            } else {
-
-                titulo.textContent =
-                    "➖ Saída de Estoque";
+            if (!modal || !titulo || !quantidade || !observacao) {
+                console.error("Elementos do formulário não encontrados.");
+                return;
             }
 
-            document.getElementById("quantidade").value = 1;
+            if (tipo !== "entrada" && tipo !== "saida") {
+                console.error("Tipo de movimentação inválido:", tipo);
+                return;
+            }
 
-            document.getElementById("observacao").value = "";
+            titulo.textContent = tipo === "entrada"
+                ? "➕ Entrada de Estoque"
+                : "➖ Saída de Estoque";
 
-            modal.style.display = "block";
+            quantidade.value = 1;
+            observacao.value = "";
+
+            modal.style.display = "flex";
+            modal.style.position = "fixed";
+            modal.style.inset = "0";
+            modal.style.zIndex = "999999";
+            modal.style.alignItems = "center";
+            modal.style.justifyContent = "center";
+            modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+
+            carregarProdutos();
         }
-
 
         // ============================
         // FECHAR MODAL
@@ -579,11 +916,13 @@
                 );
 
 
+
                 fecharModal();
 
-                carregarEstoque();
-
-                carregarProdutos();
+                // Atualizar os produtos e o histórico automaticamente
+                await carregarEstoque();
+                await carregarProdutos();
+                await carregarMovimentacoes();
 
 
             } catch (erro) {
@@ -625,237 +964,127 @@
             function () {
 
                 carregarEstoque();
-
                 carregarProdutos();
-
+                carregarMovimentacoes();
             }
         );
 
-    </script>
-    <!-- ========================================== -->
-    <!-- HISTÓRICO DE MOVIMENTAÇÕES DO ESTOQUE -->
-    <!-- ========================================== -->
-
-    <div style="
-    margin-top: 30px;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-">
-
-        <h2 style="
-        color: #9a5200;
-        margin-bottom: 20px;
-    ">
-            📋 Histórico de Movimentações
-        </h2>
-
-        <button type="button" onclick="limparHistorico()" style="
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 10px 18px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        margin-bottom: 15px;
-    ">
-            🗑️ Limpar histórico
-        </button>
-
-        <div style="
-        overflow-x: auto;
-    ">
-
-            <table style="
-            width: 100%;
-            border-collapse: collapse;
-        ">
-
-                <thead>
-
-                    <tr style="
-                    background-color: #9a5200;
-                    color: white;
-                ">
-
-                        <th style="padding: 12px; text-align: left;">
-                            ID
-                        </th>
-
-                        <th style="padding: 12px; text-align: left;">
-                            Produto
-                        </th>
-
-                        <th style="padding: 12px; text-align: left;">
-                            Tipo
-                        </th>
-
-                        <th style="padding: 12px; text-align: right;">
-                            Quantidade
-                        </th>
-
-                        <th style="padding: 12px; text-align: left;">
-                            Observação
-                        </th>
-
-                        <th style="padding: 12px; text-align: left;">
-                            Data
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody id="tabela-movimentacoes">
-
-                    <tr>
-                        <td colspan="6" style="
-                        padding: 20px;
-                        text-align: center;
-                    ">
-                            Carregando movimentações...
-                        </td>
-                    </tr>
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-    <script>
-
         async function carregarMovimentacoes() {
+            const tabela = document.getElementById("tabela-movimentacoes");
+
+            if (!tabela) {
+                console.error("Tabela de movimentações não encontrada.");
+                return;
+            }
+            tabela.innerHTML = `
+    <tr>
+        <td colspan="6" style="padding: 20px; text-align: center;">
+            Carregando movimentações...
+        </td>
+    </tr>
+    `;
 
             try {
+                const resposta = await fetch("/api/estoque/movimentacoes");
 
-                const resposta = await fetch(
-                    "/api/estoque/movimentacoes"
-                );
+                if (!resposta.ok) {
+                    throw new Error(`Erro HTTP: ${resposta.status}`);
+                }
 
-                const movimentacoes = await resposta.json();
+                const dados = await resposta.json();
 
-                const tabela = document.getElementById(
-                    "tabela-movimentacoes"
-                );
-
-                tabela.innerHTML = "";
-
-                if (movimentacoes.length === 0) {
-
+                if (!Array.isArray(dados) || dados.length === 0) {
                     tabela.innerHTML = `
-                <tr>
-                    <td colspan="6" style="
-                        padding: 20px;
-                        text-align: center;
-                    ">
-                        Nenhuma movimentação registrada.
-                    </td>
-                </tr>
-            `;
-
+    <tr>
+        <td colspan="6" style="padding: 20px; text-align: center;">
+            Nenhuma movimentação encontrada.
+        </td>
+    </tr>
+    `;
                     return;
                 }
 
-                movimentacoes.forEach(function (movimento) {
+                tabela.innerHTML = "";
 
+                dados.forEach(movimento => {
                     const linha = document.createElement("tr");
 
-                    linha.innerHTML = `
+                    const valores = [
+                        movimento.id,
+                        movimento.produto_nome ?? movimento.produto ?? movimento.nome ?? "",
+                        movimento.tipo ?? "",
+                        movimento.quantidade ?? 0,
+                        movimento.observacao || "-",
+                        movimento.data ?? movimento.data_movimentacao ?? ""
+                    ];
 
-                <td style="padding: 12px;">
-                    ${movimento.id}
-                </td>
+                    valores.forEach((valor, indice) => {
+                        const celula = document.createElement("td");
+                        celula.textContent = valor;
 
-                <td style="padding: 12px;">
-                    ${movimento.produto}
-                </td>
+                        if (indice === 2) {
+                            const tipo = String(valor)
+                                .normalize("NFD")
+                                .replace(/[\u0300-\u036f]/g, "")
+                                .toLowerCase();
+                            celula.style.fontWeight = "bold";
+                            celula.style.color =
+                                tipo === "entrada" ? "green" :
+                                    tipo === "saida" ? "red" :
+                                        "#995000";
+                        }
 
-                <td style="
-                    padding: 12px;
-                    color: ${movimento.tipo === "Entrada"
-                            ? "green"
-                            : "red"};
-                    font-weight: bold;
-                ">
-                    ${movimento.tipo}
-                </td>
+                        if (indice === 3) {
+                            celula.style.textAlign = "right";
+                        }
 
-                <td style="
-                    padding: 12px;
-                    text-align: right;
-                ">
-                    ${movimento.quantidade}
-                </td>
-
-                <td style="padding: 12px;">
-                    ${movimento.observacao || "-"}
-                </td>
-
-                <td style="padding: 12px;">
-                    ${movimento.data_movimentacao || "-"}
-                </td>
-
-            `;
+                        linha.appendChild(celula);
+                    });
 
                     tabela.appendChild(linha);
-
                 });
 
             } catch (erro) {
+                console.error("Erro ao carregar movimentações:", erro);
 
-                console.error(
-                    "Erro ao carregar movimentações:",
-                    erro
-                );
-
+                tabela.innerHTML = `
+    <tr>
+        <td colspan="6" style="padding: 20px; text-align: center;">
+            Não foi possível carregar o histórico.
+            Verifique a API e o terminal do servidor.
+        </td>
+    </tr>
+    `;
             }
-
         }
 
-        document.addEventListener(
-            "DOMContentLoaded",
-            carregarMovimentacoes
-        );
 
-    </script>
-
-    <script>
         async function limparHistorico() {
-
             const confirmar = confirm(
-                "Tem certeza que deseja limpar todo o histórico de movimentações?"
+                "Tem certeza que deseja limpar todo o histórico de movimentações? Esta ação não pode ser desfeita."
             );
-
-            if (!confirmar) {
-                return;
-            }
+            if (!confirmar) return;
 
             try {
                 const resposta = await fetch("/api/estoque/movimentacoes", {
                     method: "DELETE"
                 });
-
-                const resultado = await resposta.json();
+                let resultado = {};
+                try { resultado = await resposta.json(); } catch (_) { }
 
                 if (!resposta.ok) {
                     alert(resultado.erro || "Erro ao limpar histórico.");
                     return;
                 }
 
-                alert(resultado.mensagem);
-
-                location.reload();
-
+                alert(resultado.mensagem || "Histórico limpo.");
+                await carregarMovimentacoes();
             } catch (erro) {
-                console.error("Erro:", erro);
+                console.error("Erro ao limpar histórico:", erro);
                 alert("Erro ao conectar com o servidor.");
             }
         }
+
     </script>
 </body>
 

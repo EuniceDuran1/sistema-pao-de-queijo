@@ -829,6 +829,57 @@ def listar_pedidos():
         cursor.close()
         banco.close()
 
+
+# ==========================================
+# API - ATUALIZAR STATUS DO PEDIDO
+# ==========================================
+
+@app.put("/api/pedidos/{pedido_id}/status")
+async def atualizar_status_pedido(pedido_id: int, dados: dict):
+
+    banco = conectar_banco()
+    cursor = banco.cursor(dictionary=True)
+
+    try:
+        novo_status = dados.get("status")
+
+        if not novo_status:
+            return {"erro": "Status não informado"}
+
+        # Verificar se o pedido existe
+        cursor.execute(
+            "SELECT id FROM pedidos WHERE id = %s",
+            (pedido_id,)
+        )
+
+        pedido = cursor.fetchone()
+
+        if not pedido:
+            return {"erro": "Pedido não encontrado"}
+
+        # Atualizar o status
+        cursor.execute(
+            "UPDATE pedidos SET status = %s WHERE id = %s",
+            (novo_status, pedido_id)
+        )
+
+        banco.commit()
+
+        return {
+            "mensagem": "Status atualizado com sucesso",
+            "pedido_id": pedido_id,
+            "status": novo_status
+        }
+
+    except Exception as e:
+        banco.rollback()
+        return {"erro": str(e)}
+
+    finally:
+        cursor.close()
+        banco.close()
+
+
 # ==========================================
 # API - CRIAR PEDIDO
 # ==========================================
@@ -1238,7 +1289,7 @@ def cadastrar_indicacao(
 
     banco.commit()
     cursor.close()
-    
+    banco.close()
 
     return RedirectResponse(
         url="/indicacoes",
@@ -1927,7 +1978,7 @@ async def entrada_estoque(request: Request):
 
     produto_id = dados.get("produto_id")
     quantidade = dados.get("quantidade")
-    motivo = dados.get("motivo")
+    motivo = dados.get("observacao") or dados.get("motivo")
 
     if not produto_id or not quantidade:
         return {
@@ -2007,8 +2058,7 @@ async def saida_estoque(request: Request):
 
     produto_id = dados.get("produto_id")
     quantidade = dados.get("quantidade")
-    motivo = dados.get("motivo")
-
+    motivo = dados.get("observacao") or dados.get("motivo")
     # Validação dos campos
     if not produto_id or not quantidade:
         return {
@@ -2578,112 +2628,88 @@ async def imprimir_pedido(pedido_id: int):
 
                 @media print {{
     @page {{
-        size: A4 portrait;
-        margin: 8mm;
+        size: 58mm auto;
+        margin: 2mm;
     }}
 
-    body {{
-        margin: 0;
-        padding: 0;
-        font-size: 11px;
-        color: #222;
-    }}
+                    * {{
+                        box-sizing: border-box;
+                    }}
 
-    .cabecalho {{
-        padding-bottom: 8px;
-        margin-bottom: 10px;
-    }}
+                    html,
+                    body {{
+                        width: 54mm;
+                        margin: 0;
+                        padding: 0;
+                        font-family: Arial, sans-serif;
+                        font-size: 10px;
+                        color: #000;
+                    }}
 
-    .cabecalho h1 {{
-        font-size: 20px;
-        margin: 0;
-    }}
-
-    .cabecalho h2 {{
-        font-size: 15px;
-        margin: 4px 0 0 0;
-    }}
-
-    .informacoes {{
-        margin-bottom: 10px;
-    }}
-
-    .informacoes p {{
-        margin: 3px 0;
-    }}
-
-    table {{
-        margin-top: 10px;
-    }}
-
-    th {{
-        padding: 6px;
-        font-size: 11px;
-    }}
-
-    td {{
-        padding: 6px;
-        font-size: 11px;
-    }}
-
-    .total {{
-        margin-top: 10px;
-        font-size: 15px;
-    }}
-
-    
-}}
                     .cabecalho {{
-                        padding-bottom: 8px;
-                        margin-bottom: 12px;
+                        text-align: center;
+                        border-bottom: 1px dashed #000;
+                        padding-bottom: 5px;
+                        margin-bottom: 8px;
                     }}
 
                     .cabecalho h1 {{
-                        font-size: 20px;
+                        color: #000;
+                        font-size: 14px;
+                        margin: 0;
                     }}
 
                     .cabecalho h2 {{
-                        font-size: 16px;
+                        font-size: 12px;
+                        margin: 4px 0 0;
                     }}
 
                     .informacoes {{
-                        margin-bottom: 10px;
+                        margin-bottom: 8px;
+                        overflow-wrap: anywhere;
                     }}
 
                     .informacoes p {{
                         margin: 3px 0;
+                        line-height: 1.3;
                     }}
 
                     table {{
-                        margin-top: 8px;
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 6px;
                     }}
 
-                    th,
+                    th {{
+                        background: none;
+                        color: #000;
+                        padding: 4px 1px;
+                        text-align: left;
+                        font-size: 9px;
+                        border-bottom: 1px dashed #000;
+                    }}
+
                     td {{
-                        padding: 5px;
-                        font-size: 11px;
+                        padding: 4px 1px;
+                        font-size: 9px;
+                        border-bottom: 1px dotted #999;
+                        overflow-wrap: anywhere;
                     }}
 
                     .total {{
-                        margin-top: 10px;
-                        font-size: 16px;
+                        text-align: right;
+                        margin-top: 8px;
+                        font-size: 12px;
+                        font-weight: bold;
+                        color: #000;
+                        overflow-wrap: anywhere;
                     }}
-@media print {{
-    @page {{
-        size: A4 portrait;
-        margin: 10mm;
-    }}
 
-    body {{
-        margin: 0;
-        font-size: 12px;
-    }}
-
-    .botao-imprimir {{
-        display: none !important;
-    }}
-}}
-            </style>
+                    .botao-imprimir {{
+                        display: none !important;
+                    }}
+                }}
+</style>
         </head>
 
         <body>
@@ -2761,10 +2787,10 @@ async def imprimir_pedido(pedido_id: int):
 </body>
 </html>
 """
+
         return HTMLResponse(content=html)
 
     except Exception as erro:
-
         print("Erro ao imprimir pedido:", erro)
 
         return HTMLResponse(
@@ -2773,11 +2799,8 @@ async def imprimir_pedido(pedido_id: int):
         )
 
     finally:
-
         cursor.close()
         banco.close()
-
-
 # ==========================================
 # PÁGINA - FINANCEIRO
 # ==========================================
@@ -2785,8 +2808,6 @@ async def imprimir_pedido(pedido_id: int):
 @app.get("/financeiro")
 def pagina_financeiro():
     return FileResponse("templates/financeiro.html")
-
-
 # ==========================================
 # PÁGINA - RELATÓRIOS
 # ==========================================
